@@ -60,6 +60,19 @@ class Simulation:
 
         changeFB[t]=changeFB[t]/numberOfFirms
 
+    def calculateDeposits(self):
+        for bank in range(numberOfBanks):
+            D[bank] = np.sum(Bf[link_fb==bank])-Ab[bank]
+            if D[bank] < 0:
+                D[bank] = 0
+            # compute bad debt
+            Badb[bank] = np.sum(LGDf[fallf==1 and link_fb==bank] *
+                                Bf[fallf==1 and link_fb==bank])
+            # compute bank profits
+            Pjb[bank] = Bank[link_fb==bank and fallf==0] * \
+                        Rbf[link_fb==bank and fallf==0] - \
+                        rCB * D[bank] - cB * Ab[bank]-Badb[bank]
+
     def run(self, time):
         for t in range(time):
             # replace defaulted firms and banks
@@ -104,5 +117,9 @@ class Simulation:
             LGDf[LGDf < 0] = 0
 
             # compute deposits
+            self.calculateDeposits()
 
             # update banks net worth and check if defaulted
+            Ab=Ab+Prb
+            fallb[Ab>0] = 0
+            fallb[Ab<=0] = 1
