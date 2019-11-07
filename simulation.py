@@ -32,6 +32,34 @@ class Simulation:
         lev[0:numberOfFirms] = 1
         link_fb[0:numberOfFirms] = np.ceil(np.random.uniform(size=numberOfFirms)*numberOfBanks)
 
+    # Find bank-firm links that form credit network
+    def findMatchings(self, time):
+        for f in firms:
+            # select potential partners
+            newFallBack = np.ceil(np.random.uniform(size=chi)*self.numberOfBanks)
+
+            # select best bank
+            newBank = min(Rb(newFallBack))
+
+            # pick up interest of old partner
+            oldBank = Rb(link_fb[f])
+
+            #compare old and new
+            if (np.random.uniform(size=1) < (1-exp(lambd*(newBank - oldBank) / newBank))):
+                #switch
+                changeFb[t] = changeFb[t] + 1
+                research = which(Rb[newFallBack] == min(Rb[newFallBack]))
+
+                #check if multiple best interests
+                if (len(research) > 1):
+                    research = research[np.ceil(np.random.uniform(size=1)*length(research))]
+
+                link_fb[f] = newFallBack[research[1]]
+            else:
+                link_fb[f]=link_fb[f]
+
+        changeFB[t]=changeFB[t]/numberOfFirms
+
     def run(self, time):
         for t in range(time):
             # replace defaulted firms and banks
@@ -40,31 +68,7 @@ class Simulation:
             Rb = gamma * Ab **(-gamma)
 
             # find bank-firm matchings
-            for f in firms:
-                # select potential partners
-                newFallBack = np.ceil(np.random.uniform(size=chi)*self.numberOfBanks)
-
-                # select best bank
-                newBank = min(Rb(newFallBack))
-
-                # pick up interest of old partner
-                oldBank = Rb(link_fb[f])
-
-                #compare old and new
-                if (np.random.uniform(size=1) < (1-exp(lambd*(newBank - oldBank) / newBank))):
-                    #switch
-                    changeFb[t] = changeFb[t] + 1
-                    research = which(Rb[newFallBack] == min(Rb[newFallBack]))
-
-                    #check if multiple best interests
-                    if (len(research) > 1):
-                        research = research[np.ceil(np.random.uniform(size=1)*length(research))]
-
-                    link_fb[f] = newFallBack[research[1]]
-                else:
-                    link_fb[f]=link_fb[f]
-
-            changeFB[t]=changeFB[t]/numberOfFirms
+            self.findMatchings(t)
 
             # firms update leverage target
 
