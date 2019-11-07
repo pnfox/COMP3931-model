@@ -1,13 +1,13 @@
-
+import numpy as np
 
 
 class MonteCarlo:
 
     # setup monte carlo variables
-    def __init__(self):
-        numberOfSimulations = 1000
-        numberOfFirms = 500
-        numberOfBanks = 50
+    def __init__(self,
+            numberOfSimulations,
+            numberOfFirms,
+            numberOfBanks):
         gamma = 0.02 # interest rate parameter
         chi = 5 # number of potential partners on credit market
         lambd = 4 # intensity of choice
@@ -36,3 +36,13 @@ class MonteCarlo:
         PR = np.array() # average price
         PBF = np.array() # firms probability of default report
         PBB = np.array() # banks probability of default report
+
+if __name__=="__main__":
+    
+    numberOfSimulations = 1000
+    numberOfFirms = 500
+    numberOfBanks = 50
+
+    monteCarlo = MonteCarlo(numberOfSimulations,
+                            numberOfFirms,
+                            numberOfBanks)

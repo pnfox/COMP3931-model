@@ -2,7 +2,11 @@ import numpy as np
 
 class Simulation:
 
-    def __init__(self):
+    def __init__(self,
+            numberOfFirms,
+            numberOfBanks,
+            alpha,
+            varpf):
         Rb = np.array() # banks interest rate
         Ab = np.array() # banks net wealth
         link_fb = np.array() # firms-banks credit matching
