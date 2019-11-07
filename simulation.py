@@ -7,6 +7,9 @@ class Simulation:
             numberOfBanks,
             alpha,
             varpf):
+        self.numberOfFirms = numberOfFirms
+        self.numberOfBanks = numberOfBanks
+
         Rb = np.array() # banks interest rate
         Ab = np.array() # banks net wealth
         link_fb = np.array() # firms-banks credit matching
@@ -27,13 +30,41 @@ class Simulation:
         Ab[0:numberOfBanks] = 10
         pf[0:numberOfFirms] = np.random.normal(alpha, varpf, numberOfFirms)
         lev[0:numberOfFirms] = 1
-        link_fb[0:numberOfFirms] = ceiling(runif(numberOfFirms)*numberOfBanks)
+        link_fb[0:numberOfFirms] = np.ceil(np.random.uniform(size=numberOfFirms)*numberOfBanks)
 
     def run(self, time):
-        for i in range(time):
+        for t in range(time):
+            # replace defaulted firms and banks
+
             # update banks interest rates
+            Rb = gamma * Ab **(-gamma)
 
             # find bank-firm matchings
+            for f in firms:
+                # select potential partners
+                newFallBack = np.ceil(np.random.uniform(size=chi)*self.numberOfBanks)
+
+                # select best bank
+                newBank = min(Rb(newFallBack))
+
+                # pick up interest of old partner
+                oldBank = Rb(link_fb[f])
+
+                #compare old and new
+                if (np.random.uniform(size=1) < (1-exp(lambd*(newBank - oldBank) / newBank))):
+                    #switch
+                    changeFb[t] = changeFb[t] + 1
+                    research = which(Rb[newFallBack] == min(Rb[newFallBack]))
+
+                    #check if multiple best interests
+                    if (len(research) > 1):
+                        research = research[np.ceil(np.random.uniform(size=1)*length(research))]
+
+                    link_fb[f] = newFallBack[research[1]]
+                else:
+                    link_fb[f]=link_fb[f]
+
+            changeFB[t]=changeFB[t]/numberOfFirms
 
             # firms update leverage target
 
