@@ -71,23 +71,37 @@ class Simulation:
             self.findMatchings(t)
 
             # firms update leverage target
+            u = np.random.uniform(size=numberOfFirms)
+            lev[pf > Rbf] = lev[pf > Rbf] * (1 + adj*u[pj>Rbf])
+            lev[pf <= Rbf] = lev[pf <= Rbf] * (1 - adj*u[pj<=Rbf])
 
             # determine demand for loans
+            Bf = lev * Af
 
             # compute total financial capital
+            Kf = Af + Bf
 
             # compute output
+            Yf = phi * Kf ** beta
 
             # update price
             pf = np.random.normal(alpha, varpf, numberOfFirms)
 
             # compute interest rate charged to firms
+            Rbf = rCB + Rb(link_fb) + gamma*(lev) / ((1+Af/max(Af)))
 
             # compute firms price
+            Prf = pf * Yf - Rbf * Bf
 
             # update firms net worth and check wether defaulted
+            Af = Af + Prf
+            fallf[Af > 0] = 0
+            fallf[Af <= 0] = 1
 
             # compute loss given default ratio
+            LGDf[0:numberOfFirms] = -(Af) / (Bf)
+            LGDf[LGDf > 1] = 1
+            LGDf[LGDf < 0] = 0
 
             # compute deposits
 
