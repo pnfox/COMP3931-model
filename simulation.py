@@ -73,6 +73,21 @@ class Simulation:
                         Rbf[link_fb==bank and fallf==0] - \
                         rCB * D[bank] - cB * Ab[bank]-Badb[bank]
 
+    # replace bankrupt banks and firms with new ones
+    def replaceDefaults(self):
+        for firm in range(numberOfFirms):
+            if fallf[firm] == 1:
+                Af[firm] = 2 * np.random.uniform()
+                lev[firm] = 1
+                pf[firm] = np.random.normal(alpha, varpf, 1)
+                link_fb[firm] = np.ceil(np.random.uniform(size=1)*numberOfBanks)
+                Rbf[firm] = rCB + Rb[link_fb[firm]] + gamma*(lev[firm]) / \
+                            ((1+Af[firm] / max(Af)))
+
+        for bank in range(numberOfBanks):
+            if(fallb[bank] == 1):
+                Ab[bank] = 2 * np.random.uniform()
+
     def run(self, time):
         for t in range(time):
             # replace defaulted firms and banks
