@@ -27,7 +27,7 @@ class Simulation:
 
         Rb = np.array([]) # banks interest rate
         Ab = np.array([]) # banks net wealth
-        link_fb = np.array([]) # firms-banks credit matching
+        link_fb = np.array([0]*numberOfFirms) # firms-banks credit matching
         Rbf = np.array([]) # firms interest rate on loans
         lev = np.array([]) # firms leverage
         pf = np.array([]) # firms price
@@ -59,20 +59,21 @@ class Simulation:
             potentialPartners = np.ceil(np.random.uniform(size=chi)*self.numberOfBanks)
 
             # select best bank
-            newBank = self.findBestBank(potentialPartners)
+            bestBankIndex = self.findBestBank(potentialPartners)
+            newInterest = self.bank[bestBankIndex].interestRate
 
             # pick up interest of old partner
-            oldBank = Rb(link_fb[f])
+            oldInterest = self.bank[link_fb[f]].interestRate
 
             #compare old and new
-            if (np.random.uniform(size=1) < (1-exp(lambd*(newBank - oldBank) / newBank))):
+            if (np.random.uniform(size=1) < \
+                    (1-exp(lambd*(newInterest - oldInterest) / newInterest))):
                 #switch
                 changeFb[t] = changeFb[t] + 1
-                research = newBank # TODO: need to check this is correct
 
                 # TODO: check for multiple best banks
 
-                link_fb[f] = potentialPartners[newBank]
+                link_fb[f] = bestBankIndex
             else:
                 link_fb[f]=link_fb[f]
 
