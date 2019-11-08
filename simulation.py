@@ -1,45 +1,65 @@
 import numpy as np
+import agents
 
 class Simulation:
 
     def __init__(self,
             numberOfFirms,
             numberOfBanks,
-            alpha,
-            varpf):
+            alpha, # mean of firms price
+            varpf # variance of firms price
+            ):
         self.numberOfFirms = numberOfFirms
         self.numberOfBanks = numberOfBanks
 
-        Rb = np.array() # banks interest rate
-        Ab = np.array() # banks net wealth
-        link_fb = np.array() # firms-banks credit matching
-        Rbf = np.array() # firms interest rate on loans
-        lev = np.array() # firms leverage
-        pf = np.array() # firms price
-        Bf = np.array() # firms net debt
-        Af = np.array() # firms net wealth
-        fallf = np.array() # firms defaults (1=defaulted, 0=surviving)
-        fallb = np.array() # banks defaults (1=defaulted, 0=surviving)
-        LGDF = np.array() # loss-given-default ratio
-        D = np.array() # deposits
-        Badb = np.array() # banks non performing loans
-        Prb = np.array() # banks profits
-        creditDegree = np.array() # banks credit link degree
+        # store firms in array
+        self.firms = np.array([])
+        for i in range(numberOfFirms):
+            f = Firm(alpha, varpf)
+            self.firms = np.append(self.firms, f)
 
-        Af[0:numberOfFirms] = 10
-        Ab[0:numberOfBanks] = 10
-        pf[0:numberOfFirms] = np.random.normal(alpha, varpf, numberOfFirms)
-        lev[0:numberOfFirms] = 1
+        # store banks in array
+        self.banks = np.array([])
+        for i in range(numberOfBanks):
+            b = Bank()
+            self.banks = np.append(self.banks, b)
+
+
+        Rb = np.array([]) # banks interest rate
+        Ab = np.array([]) # banks net wealth
+        link_fb = np.array([]) # firms-banks credit matching
+        Rbf = np.array([]) # firms interest rate on loans
+        lev = np.array([]) # firms leverage
+        pf = np.array([]) # firms price
+        Bf = np.array([]) # firms net debt
+        Af = np.array([]) # firms net wealth
+        fallf = np.array([]) # firms defaults (1=defaulted, 0=surviving)
+        fallb = np.array([]) # banks defaults (1=defaulted, 0=surviving)
+        LGDF = np.array([]) # loss-given-default ratio
+        D = np.array([]) # deposits
+        Badb = np.array([]) # banks non performing loans
+        Prb = np.array([]) # banks profits
+        creditDegree = np.array([]) # banks credit link degree
+
         link_fb[0:numberOfFirms] = np.ceil(np.random.uniform(size=numberOfFirms)*numberOfBanks)
+
+    def findBestBank(self, potentialPartners):
+        lowestInterest = 100000
+        for i in potentialPartners:
+            if self.banks[i].interestRate < lowestInterest:
+                lowestInterest = self.banks[i].interestRate
+                best = i
+
+        return best
 
     # Find bank-firm links that form credit network
     def findMatchings(self, time):
-        for f in firms:
-            # select potential partners
-            newFallBack = np.ceil(np.random.uniform(size=chi)*self.numberOfBanks)
+        for f in len(self.firms):
+            # select potential partners, this is newFallBack
+            potentialPartners = np.ceil(np.random.uniform(size=chi)*self.numberOfBanks)
 
             # select best bank
-            newBank = min(Rb(newFallBack))
+            newBank = self.findBestBank(potentialPartners)
 
             # pick up interest of old partner
             oldBank = Rb(link_fb[f])
@@ -48,13 +68,11 @@ class Simulation:
             if (np.random.uniform(size=1) < (1-exp(lambd*(newBank - oldBank) / newBank))):
                 #switch
                 changeFb[t] = changeFb[t] + 1
-                research = which(Rb[newFallBack] == min(Rb[newFallBack]))
+                research = newBank # TODO: need to check this is correct
 
-                #check if multiple best interests
-                if (len(research) > 1):
-                    research = research[np.ceil(np.random.uniform(size=1)*length(research))]
+                # TODO: check for multiple best banks
 
-                link_fb[f] = newFallBack[research[1]]
+                link_fb[f] = potentialPartners[newBank]
             else:
                 link_fb[f]=link_fb[f]
 

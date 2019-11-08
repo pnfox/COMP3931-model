@@ -19,23 +19,23 @@ class MonteCarlo:
         rBC = 0.02 # central bank interest rate
         cB = 0.01 # banks costs
 
-        # output variables: Each entry in arrays is for 1 simulation
-        changeFB = np.array() # switching rate report
-        YF = np.array() # output report
-        AB = np.array() # banks NW report
-        AF = np.array() # firms NW report
-        BF = np.array() # debt report
-        RBF = np.array() # average interest rate report
-        BAD = np.array() # bad debt report
-        FALLF = np.array() # firms defaults report
-        FALLB = np.array() # banks defaults report
-        LEV = np.array() # leverage (BF/AF) report
-        PRF = np.array() # firms profits report
-        PRB = np.array() # banks profits report
-        GR = np.array() # growth rate report
-        PR = np.array() # average price
-        PBF = np.array() # firms probability of default report
-        PBB = np.array() # banks probability of default report
+        # output variables: Each col for monte carlo run, each row for sim round
+        self.changeFB = np.array() # switching rate report
+        self.YF = np.array() # output report
+        self.AB = np.array() # banks NW report
+        self.AF = np.array() # firms NW report
+        self.BF = np.array() # debt report
+        self.RBF = np.array() # average interest rate report
+        self.BAD = np.array() # bad debt report
+        self.FALLF = np.array() # firms defaults report
+        self.FALLB = np.array() # banks defaults report
+        self.LEV = np.array() # leverage (BF/AF) report
+        self.PRF = np.array() # firms profits report
+        self.PRB = np.array() # banks profits report
+        self.GR = np.array() # growth rate report
+        self.PR = np.array() # average price
+        self.PBF = np.array() # firms probability of default report
+        self.PBB = np.array() # banks probability of default report
 
 if __name__=="__main__":
     
