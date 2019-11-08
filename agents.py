@@ -10,6 +10,7 @@ class Firm:
         self.price = np.random.normal(alpha, varpf, numberOfFirms)
         self.debt = 0
         self.networth = 10
+        self.interestRate = 0 # firm interestRate on loans
         self.leverage = 1
         self.default = False # (True=defaulted, False=surviving)
 

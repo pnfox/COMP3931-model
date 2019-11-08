@@ -7,15 +7,15 @@ class MonteCarlo:
     def __init__(self,
             numberOfSimulations,
             numberOfFirms,
-            numberOfBanks):
-        gamma = 0.02 # interest rate parameter
+            numberOfBanks,
+            alpha,
+            varpf,
+            gamma):
         chi = 5 # number of potential partners on credit market
         lambd = 4 # intensity of choice
         adj = 0.1 # leverage adjustment
         phi = 3 # production function parameter
         beta = 0.7 # production function parameter
-        alpha = 0.1 # mean of firm price
-        varpf = 0.4 # variance of firm price
         rBC = 0.02 # central bank interest rate
         cB = 0.01 # banks costs
 
@@ -43,6 +43,13 @@ if __name__=="__main__":
     numberOfFirms = 500
     numberOfBanks = 50
 
+    alpha = 0.1 # mean of firm price
+    varpf = 0.4 # variance of firm price
+    gamma = 0.02 # interest rate parameter
+
     monteCarlo = MonteCarlo(numberOfSimulations,
                             numberOfFirms,
-                            numberOfBanks)
+                            numberOfBanks,
+                            alpha,
+                            varpf,
+                            gamma)

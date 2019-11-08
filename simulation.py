@@ -7,10 +7,14 @@ class Simulation:
             numberOfFirms,
             numberOfBanks,
             alpha, # mean of firms price
-            varpf # variance of firms price
+            varpf, # variance of firms price
+            gamma, # interest rate parameter
             ):
         self.numberOfFirms = numberOfFirms
         self.numberOfBanks = numberOfBanks
+        self.alpha = alpha
+        self.varpf = varpf
+        self.gamma = gamma
 
         # store firms in array
         self.firms = np.array([])
@@ -27,7 +31,7 @@ class Simulation:
 
         Rb = np.array([]) # banks interest rate
         Ab = np.array([]) # banks net wealth
-        link_fb = np.array([0]*numberOfFirms) # firms-banks credit matching
+        self.link_fb = np.array([0]*numberOfFirms) # firms-banks credit matching
         Rbf = np.array([]) # firms interest rate on loans
         lev = np.array([]) # firms leverage
         pf = np.array([]) # firms price
@@ -41,7 +45,7 @@ class Simulation:
         Prb = np.array([]) # banks profits
         creditDegree = np.array([]) # banks credit link degree
 
-        link_fb[0:numberOfFirms] = np.ceil(np.random.uniform(size=numberOfFirms)*numberOfBanks)
+        self.link_fb[0:numberOfFirms] = np.ceil(np.random.uniform(size=numberOfFirms)*numberOfBanks)
 
     def findBestBank(self, potentialPartners):
         lowestInterest = 100000
@@ -63,7 +67,7 @@ class Simulation:
             newInterest = self.bank[bestBankIndex].interestRate
 
             # pick up interest of old partner
-            oldInterest = self.bank[link_fb[f]].interestRate
+            oldInterest = self.bank[self.link_fb[f]].interestRate
 
             #compare old and new
             if (np.random.uniform(size=1) < \
@@ -73,43 +77,56 @@ class Simulation:
 
                 # TODO: check for multiple best banks
 
-                link_fb[f] = bestBankIndex
+                self.link_fb[f] = bestBankIndex
             else:
-                link_fb[f]=link_fb[f]
+                self.link_fb[f]=self.link_fb[f]
 
         changeFB[t]=changeFB[t]/numberOfFirms
 
     def calculateDeposits(self):
         for bank in range(numberOfBanks):
-            D[bank] = np.sum(Bf[link_fb==bank])-Ab[bank]
+            D[bank] = np.sum(Bf[self.link_fb==bank])-Ab[bank]
             if D[bank] < 0:
                 D[bank] = 0
             # compute bad debt
-            Badb[bank] = np.sum(LGDf[fallf==1 and link_fb==bank] *
-                                Bf[fallf==1 and link_fb==bank])
+            Badb[bank] = np.sum(LGDf[fallf==1 and self.link_fb==bank] *
+                                Bf[fallf==1 and self.link_fb==bank])
             # compute bank profits
-            Pjb[bank] = Bank[link_fb==bank and fallf==0] * \
-                        Rbf[link_fb==bank and fallf==0] - \
+            Pjb[bank] = Bank[self.link_fb==bank and fallf==0] * \
+                        Rbf[self.link_fb==bank and fallf==0] - \
                         rCB * D[bank] - cB * Ab[bank]-Badb[bank]
+
+    def maxFirmWealth(self):
+        maxWealth = -100000
+        for f in self.firms():
+            if f.networth > maxWealth:
+                maxWealth = f.networth
+
+        return maxWealth
 
     # replace bankrupt banks and firms with new ones
     def replaceDefaults(self):
-        for firm in range(numberOfFirms):
-            if fallf[firm] == 1:
-                Af[firm] = 2 * np.random.uniform()
-                lev[firm] = 1
-                pf[firm] = np.random.normal(alpha, varpf, 1)
-                link_fb[firm] = np.ceil(np.random.uniform(size=1)*numberOfBanks)
-                Rbf[firm] = rCB + Rb[link_fb[firm]] + gamma*(lev[firm]) / \
-                            ((1+Af[firm] / max(Af)))
+        fnum = 0
+        for firm in self.firms:
+            if firm.default == 1:
+                firm.networth = 2 * np.random.uniform()
+                firm.leverage = 1
+                firm.price = np.random.normal(self.alpha, self.varpf, 1)
+                self.link_fb[fnum] = np.ceil(np.random.uniform(size=1)*self.numberOfBanks)
+                maxFirmWealth = self.maxFrimWealth()
+                firm.interestRate = rCB + self.banks[self.link_fb[fnum]].interestRate + \
+                                    self.gamma*(firm.leverage) / \
+                                    ((1+firm.networth / maxFirmWealth))
+            fnum += 1
 
-        for bank in range(numberOfBanks):
-            if(fallb[bank] == 1):
-                Ab[bank] = 2 * np.random.uniform()
+        for bank in self.banks:
+            if(bank.default == 1):
+                bank.networth = 2 * np.random.uniform()
 
     def run(self, time):
         for t in range(time):
             # replace defaulted firms and banks
+            self.replaceDefaults()
 
             # update banks interest rates
             Rb = gamma * Ab **(-gamma)
@@ -135,7 +152,7 @@ class Simulation:
             pf = np.random.normal(alpha, varpf, numberOfFirms)
 
             # compute interest rate charged to firms
-            Rbf = rCB + Rb(link_fb) + gamma*(lev) / ((1+Af/max(Af)))
+            Rbf = rCB + Rb(self.link_fb) + gamma*(lev) / ((1+Af/max(Af)))
 
             # compute firms price
             Prf = pf * Yf - Rbf * Bf
