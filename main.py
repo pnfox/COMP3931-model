@@ -5,7 +5,7 @@ class MonteCarlo:
 
     # setup monte carlo variables
     def __init__(self,
-            numberOfSimulations,
+            simulationTime,
             numberOfFirms,
             numberOfBanks,
             alpha,
@@ -39,7 +39,7 @@ class MonteCarlo:
 
 if __name__=="__main__":
     
-    numberOfSimulations = 1000
+    simulationTime = 1000
     numberOfFirms = 500
     numberOfBanks = 50
 
@@ -47,7 +47,7 @@ if __name__=="__main__":
     varpf = 0.4 # variance of firm price
     gamma = 0.02 # interest rate parameter
 
-    monteCarlo = MonteCarlo(numberOfSimulations,
+    monteCarlo = MonteCarlo(simulationTime,
                             numberOfFirms,
                             numberOfBanks,
                             alpha,

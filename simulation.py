@@ -4,12 +4,14 @@ import agents
 class Simulation:
 
     def __init__(self,
+            time, # time simulation is ran for
             numberOfFirms,
             numberOfBanks,
             alpha, # mean of firms price
             varpf, # variance of firms price
             gamma, # interest rate parameter
             ):
+        self.time = time
         self.numberOfFirms = numberOfFirms
         self.numberOfBanks = numberOfBanks
         self.alpha = alpha
@@ -19,13 +21,13 @@ class Simulation:
         # store firms in array
         self.firms = np.array([])
         for i in range(numberOfFirms):
-            f = Firm(alpha, varpf)
+            f = agents.Firm(alpha, varpf)
             self.firms = np.append(self.firms, f)
 
         # store banks in array
         self.banks = np.array([])
         for i in range(numberOfBanks):
-            b = Bank()
+            b = agents.Bank()
             self.banks = np.append(self.banks, b)
 
 
@@ -46,6 +48,9 @@ class Simulation:
         creditDegree = np.array([]) # banks credit link degree
 
         self.link_fb[0:numberOfFirms] = np.ceil(np.random.uniform(size=numberOfFirms)*numberOfBanks)
+
+        # Output variables
+        self.changeFB = np.array([0]*self.time)
 
     def findBestBank(self, potentialPartners):
         lowestInterest = 100000
@@ -73,7 +78,7 @@ class Simulation:
             if (np.random.uniform(size=1) < \
                     (1-exp(lambd*(newInterest - oldInterest) / newInterest))):
                 #switch
-                changeFb[t] = changeFb[t] + 1
+                self.changeFb[t] = self.changeFb[t] + 1
 
                 # TODO: check for multiple best banks
 
@@ -81,7 +86,7 @@ class Simulation:
             else:
                 self.link_fb[f]=self.link_fb[f]
 
-        changeFB[t]=changeFB[t]/numberOfFirms
+        self.changeFB[t] = self.changeFB[t] / self.numberOfFirms
 
     def calculateDeposits(self):
         for bank in range(numberOfBanks):
@@ -123,8 +128,8 @@ class Simulation:
             if(bank.default == 1):
                 bank.networth = 2 * np.random.uniform()
 
-    def run(self, time):
-        for t in range(time):
+    def run(self):
+        for t in range(self.time):
             # replace defaulted firms and banks
             self.replaceDefaults()
 
