@@ -30,7 +30,6 @@ class Bank:
         self.creditLinkDegree = 0
         self.nonPerformingLoans = 0
         self.default = False
-        self.customers = []
 
     def isDefaulted(self):
         return self.default

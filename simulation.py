@@ -98,27 +98,35 @@ class Simulation:
 
                 # TODO: check for multiple best banks
 
+                # update link
                 self.link_fb[f] = bestBankIndex
             else:
                 self.link_fb[f] = self.link_fb[f]
 
         self.changeFB[t] = self.changeFB[t] / self.numberOfFirms
 
-    def calculateDeposits(self):
-        for bank in range(numberOfBanks):
+    # find who is using bank i
+    def findBankCustomers(self, i):
+        return np.where(self.link_fb == i)
 
+    def calculateDeposits(self):
+        bankIndex = 0
+        for bank in self.banks:
+            # find who is using bank
+            customers = self.findBankCustomers(bankIndex)
             banksTotalLoans = 0
-            for i in bank.customers:
+            for i in customers:
                 bankTotalLoans += self.firms[i].debt
 
             bank.deposit = banksTotalLoans - bank.networth
+
             # bank has gone bankrupt
             if bank.deposit < 0:
                 bank.deposit = 0
 
             # compute bad debt
             bankBadDebt = 0
-            for i in bank.customers:
+            for i in customers:
                 if self.firms[i].default:
                     bankBadDebt += self.firms[i].lgdf * self.firms[i].debt
 
@@ -126,13 +134,14 @@ class Simulation:
 
             # compute bank profits
             bankProfit = 0
-            for i in bank.customers:
+            for i in customers:
                 customer = self.firm[i]
                 if customer.default:
                     bankProfit += customer.debt * customer.interestRate - \
                                 self.rCB * bank.deposit - \
                                 self.cB * bank.networth - bank.badDebt
             bank.profit = bankProfit
+            bankIndex += 1
 
     def maxFirmWealth(self):
         maxWealth = -100000
