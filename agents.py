@@ -1,3 +1,4 @@
+import numpy as np
 
 class Firm:
 
@@ -5,7 +6,7 @@ class Firm:
                 alpha, # mean of firms price
                 varpf # variance of firms price
                 ):
-        self.price = np.random.normal(alpha, varpf, numberOfFirms)
+        self.price = np.random.normal(alpha, varpf)
         self.debt = 0
         self.networth = 10
         self.profit = 0

@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import math
 import agents
 
 class Simulation:
@@ -29,7 +31,7 @@ class Simulation:
         self.adj = adj
         self.phi = phi
         self.beta = beta
-        self.rBC = rCB
+        self.rCB = rCB
         self.cB = cB
         self.bestFirm = 0
 
@@ -67,34 +69,36 @@ class Simulation:
 
         # Output variables
         self.changeFB = np.array([0]*self.time)
+        self.firmOutputReport = np.array([0]*self.time)
 
     def findBestBank(self, potentialPartners):
         lowestInterest = 100000
         for i in potentialPartners:
-            if self.banks[i].interestRate < lowestInterest:
-                lowestInterest = self.banks[i].interestRate
-                best = i
+            index = int(i)-1
+            if self.banks[index].interestRate < lowestInterest:
+                lowestInterest = self.banks[index].interestRate
+                best = index
 
         return best
 
     # Find bank-firm links that form credit network
     def findMatchings(self, time):
-        for f in len(self.firms):
+        for f in range(len(self.firms)):
             # select potential partners, this is newFallBack
             potentialPartners = np.ceil(np.random.uniform(size=self.chi)*self.numberOfBanks)
 
             # select best bank
             bestBankIndex = self.findBestBank(potentialPartners)
-            newInterest = self.bank[bestBankIndex].interestRate
+            newInterest = self.banks[bestBankIndex].interestRate
 
             # pick up interest of old partner
-            oldInterest = self.bank[self.link_fb[f]].interestRate
+            oldInterest = self.banks[self.link_fb[f]-1].interestRate
 
             #compare old and new
             if (np.random.uniform(size=1) < \
-                    (1-exp(self.lambd*(newInterest - oldInterest) / newInterest))):
+                    (1-math.exp(self.lambd*(newInterest - oldInterest) / newInterest))):
                 #switch
-                self.changeFb[t] = self.changeFb[t] + 1
+                self.changeFB[time] = self.changeFB[time] + 1
 
                 # TODO: check for multiple best banks
 
@@ -103,11 +107,11 @@ class Simulation:
             else:
                 self.link_fb[f] = self.link_fb[f]
 
-        self.changeFB[t] = self.changeFB[t] / self.numberOfFirms
+        self.changeFB[time] = self.changeFB[time] / self.numberOfFirms
 
     # find who is using bank i
     def findBankCustomers(self, i):
-        return np.where(self.link_fb == i)
+        return np.where(self.link_fb == i)[0]
 
     def calculateDeposits(self):
         bankIndex = 0
@@ -116,7 +120,7 @@ class Simulation:
             customers = self.findBankCustomers(bankIndex)
             banksTotalLoans = 0
             for i in customers:
-                bankTotalLoans += self.firms[i].debt
+                banksTotalLoans += self.firms[i].debt
 
             bank.deposit = banksTotalLoans - bank.networth
 
@@ -135,7 +139,7 @@ class Simulation:
             # compute bank profits
             bankProfit = 0
             for i in customers:
-                customer = self.firm[i]
+                customer = self.firms[i]
                 if customer.default:
                     bankProfit += customer.debt * customer.interestRate - \
                                 self.rCB * bank.deposit - \
@@ -145,7 +149,7 @@ class Simulation:
 
     def maxFirmWealth(self):
         maxWealth = -100000
-        for f in self.firms():
+        for f in self.firms:
             if f.networth > maxWealth:
                 maxWealth = f.networth
 
@@ -160,8 +164,8 @@ class Simulation:
                 firm.leverage = 1
                 firm.price = np.random.normal(self.alpha, self.varpf, 1)
                 self.link_fb[fnum] = np.ceil(np.random.uniform(size=1)*self.numberOfBanks)
-                maxFirmWealth = self.maxFrimWealth()
-                firm.interestRate = self.rCB + self.banks[self.link_fb[fnum]].interestRate + \
+                maxFirmWealth = self.maxFirmWealth()
+                firm.interestRate = self.rCB + self.banks[self.link_fb[fnum]-1].interestRate + \
                                     self.gamma*(firm.leverage) / \
                                     ((1+firm.networth / maxFirmWealth))
             fnum += 1
@@ -184,19 +188,21 @@ class Simulation:
 
     def updateFirmOutput(self):
         for f in self.firms:
-            f.output = self.phi * self.totalCapital ** self.beta
+            f.output = self.phi * f.totalCapital ** self.beta
 
     def updateFirmPrice(self):
         for f in self.firms:
-            f.price = np.random.normal(self.alpha, self.varpf, self.numberOfFirms)
+            f.price = np.random.normal(self.alpha, self.varpf)
 
-    def updateFirmInteretRate(self):
+    def updateFirmInterestRate(self):
+        firmIndex = 0
         for f in self.firms:
             # interest of bank that firm uses
-            bankInterest = self.banks[f.bank].interestRate
+            bankInterest = self.banks[self.link_fb[firmIndex]-1].interestRate
             bestFirmWorth = self.bestFirm.networth
             f.interestRate = self.rCB + bankInterest + \
-                             self.gamma(f.leverage) / ((1+f.networth/bestFirmWorth))
+                             self.gamma*(f.leverage) / ((1+f.networth/bestFirmWorth))
+            firmIndex += 1
 
     def updateFirmProfit(self):
         for f in self.firms:
@@ -204,7 +210,7 @@ class Simulation:
 
     def updateFirmNetWorth(self):
         for f in self.firms:
-            f.networth += f.profit
+            f.networth = f.networth + f.profit
             if f.networth > 0:
                 f.default = 0
             elif f.networth <= 0:
@@ -221,15 +227,19 @@ class Simulation:
     def updateFirmLeverage(self):
         for f in self.firms:
             u = np.random.uniform()
-            if f.price > f.interest:
+            if f.price > f.interestRate:
                 f.leverage = f.leverage * (1 + self.adj * u)
-            elif f.price <= f.interest:
+            elif f.price <= f.interestRate:
                 f.leverage = f.leverage * (1 - self.adj * u)
+
+    def updateFirmDebt(self):
+        for f in self.firms:
+            f.debt = f.leverage * f.networth
 
     def updateLossRatio(self):
         for f in self.firms:
-            lossGivenRation = -f.networth / f.debt
-            if lossGivenRation > 1:
+            lossGivenRatio = -f.networth / f.debt
+            if lossGivenRatio > 1:
                 lossGivenRatio = 1
             if lossGivenRatio < 0:
                 lossGivenRatio = 0
@@ -256,7 +266,7 @@ class Simulation:
             self.updateFirmCapital()
 
             # compute output
-            self.updateFrimOutput()
+            self.updateFirmOutput()
 
             # update price
             self.updateFirmPrice()
@@ -285,3 +295,11 @@ class Simulation:
 
             # update banks net worth and check if defaulted
             self.updateBankNetWorth()
+
+            totalOutput = 0
+            for f in self.firms:
+                totalOutput += f.output
+
+            self.firmOutputReport[t] = totalOutput
+        plt.plot(self.firmOutputReport)
+        plt.show()
