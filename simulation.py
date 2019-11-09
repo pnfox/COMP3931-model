@@ -31,6 +31,7 @@ class Simulation:
         self.beta = beta
         self.rBC = rCB
         self.cB = cB
+        self.bestFirm = 0
 
         # store firms in array
         self.firms = np.array([])
@@ -180,6 +181,42 @@ class Simulation:
         for f in self.firms:
             f.price = np.random.normal(self.alpha, self.varpf, self.numberOfFirms)
 
+    def updateFirmInteretRate(self):
+        for f in self.firms:
+            # interest of bank that firm uses
+            bankInterest = self.banks[f.bank].interestRate
+            bestFirmWorth = self.bestFirm.networth
+            f.interestRate = self.rCB + bankInterest + \
+                             self.gamma(f.leverage) / ((1+f.networth/bestFirmWorth))
+
+    def updateFirmProfit(self):
+        for f in self.firms:
+            f.profit = f.price * f.output - f.interestRate * f.debt
+
+    def updateFirmNetWorth(self):
+        for f in self.firms:
+            f.networth += f.profit
+            if f.networth > 0:
+                f.default = 0
+            elif f.networth <= 0:
+                f.default = 1
+
+    def updateBankNetWorth(self):
+        for b in self.banks:
+            b.networth += b.profit
+            if b.networth > 0:
+                b.default = 0
+            elif b.networth <= 0:
+                b.default = 1
+
+    def updateFirmLeverage(self):
+        for f in self.firms:
+            u = np.random.uniform()
+            if f.price > f.interest:
+                f.leverage = f.leverage * (1 + self.adj * u)
+            elif f.price <= f.interest:
+                f.leverage = f.leverage * (1 - self.adj * u)
+
     def updateLossRatio(self):
         for f in self.firms:
             lossGivenRation = -f.networth / f.debt
@@ -201,9 +238,7 @@ class Simulation:
             self.findMatchings(t)
 
             # firms update leverage target
-            u = np.random.uniform(size=numberOfFirms)
-            lev[pf > Rbf] = lev[pf > Rbf] * (1 + adj*u[pj>Rbf])
-            lev[pf <= Rbf] = lev[pf <= Rbf] * (1 - adj*u[pj<=Rbf])
+            self.updateFirmLeverage()
 
             # determine demand for loans
             self.updateFirmDebt()
@@ -217,16 +252,21 @@ class Simulation:
             # update price
             self.updateFirmPrice()
 
-            # compute interest rate charged to firms
-            Rbf = rCB + Rb(self.link_fb) + self.gamma*(lev) / ((1+Af/max(Af)))
+            # find best firm
+            bestNetWorthFirm = -100000
+            for f in self.firms:
+                if f.networth > bestNetWorthFirm:
+                    self.bestFirm = f
+                    bestNetWorthFirm = f.networth
 
-            # compute firms price
-            Prf = pf * Yf - Rbf * Bf
+            # compute interest rate charged to firms
+            self.updateFirmInterestRate()
+
+            # compute firms profit
+            self.updateFirmProfit()
 
             # update firms net worth and check wether defaulted
-            Af = Af + Prf
-            fallf[Af > 0] = 0
-            fallf[Af <= 0] = 1
+            self.updateFirmNetWorth()
 
             # compute loss given default ratio
             self.updateLossRatio()
@@ -235,6 +275,4 @@ class Simulation:
             self.calculateDeposits()
 
             # update banks net worth and check if defaulted
-            Ab=Ab+Prb
-            fallb[Ab>0] = 0
-            fallb[Ab<=0] = 1
+            self.updateBankNetWorth()

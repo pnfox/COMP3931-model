@@ -8,6 +8,7 @@ class Firm:
         self.price = np.random.normal(alpha, varpf, numberOfFirms)
         self.debt = 0
         self.networth = 10
+        self.profit = 0
         self.interestRate = 0 # firm interestRate on loans
         self.leverage = 1
         self.totalCapital = 0
