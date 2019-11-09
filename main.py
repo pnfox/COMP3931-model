@@ -8,16 +8,24 @@ class MonteCarlo:
             simulationTime,
             numberOfFirms,
             numberOfBanks,
-            alpha,
-            varpf,
-            gamma):
-        chi = 5 # number of potential partners on credit market
-        lambd = 4 # intensity of choice
-        adj = 0.1 # leverage adjustment
-        phi = 3 # production function parameter
-        beta = 0.7 # production function parameter
-        rBC = 0.02 # central bank interest rate
-        cB = 0.01 # banks costs
+            alpha, # mean of firms price
+            varpf, # variance of firms price
+            gamma, # interest rate parameter
+            chi, # number of potential partners on credit market
+            lambd, # intensity of choice
+            adj, # leverage adjustment
+            phi, # production function parameter
+            beta, # production function parameter
+            rCB, # central bank interest rate
+            cB, # banks costs
+            ):
+        self.chi = chi # number of potential partners on credit market
+        self.lambd = lambd # intensity of choice
+        self.adj = adj # leverage adjustment
+        self.phi = phi # production function parameter
+        self.beta = beta # production function parameter
+        self.rBC = rCB # central bank interest rate
+        self.cB = cB # banks costs
 
         # output variables: Each col for monte carlo run, each row for sim round
         self.changeFB = np.array() # switching rate report
@@ -46,10 +54,24 @@ if __name__=="__main__":
     alpha = 0.1 # mean of firm price
     varpf = 0.4 # variance of firm price
     gamma = 0.02 # interest rate parameter
+    chi = 5 # number of potential partners on credit market
+    lambd = 4 # intensity of choice
+    adj = 0.1 # leverage adjustment
+    phi = 3 # production function parameter
+    beta = 0.7 # production function parameter
+    rBC = 0.02 # central bank interest rate
+    cB = 0.01 # banks costs
 
     monteCarlo = MonteCarlo(simulationTime,
                             numberOfFirms,
                             numberOfBanks,
                             alpha,
                             varpf,
-                            gamma)
+                            gamma,
+                            chi,
+                            lambd,
+                            adj,
+                            phi,
+                            beta,
+                            rCB,
+                            cB)
