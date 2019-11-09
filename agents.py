@@ -10,6 +10,8 @@ class Firm:
         self.networth = 10
         self.interestRate = 0 # firm interestRate on loans
         self.leverage = 1
+        self.totalCapital = 0
+        self.output = 0
         self.lgdf = 0 # loss-given default ratio
         self.default = False # (True=defaulted, False=surviving)
 

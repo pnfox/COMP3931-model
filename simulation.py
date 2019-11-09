@@ -10,6 +10,13 @@ class Simulation:
             alpha, # mean of firms price
             varpf, # variance of firms price
             gamma, # interest rate parameter
+            chi, # number of potential partners on credit market
+            lambd, # intensity of choice
+            adj, # leverage adjustment
+            phi, # production function parameter
+            beta, # production function parameter
+            rCB, # central bank interest rate
+            cB, # banks costs
             ):
         self.time = time
         self.numberOfFirms = numberOfFirms
@@ -17,6 +24,13 @@ class Simulation:
         self.alpha = alpha
         self.varpf = varpf
         self.gamma = gamma
+        self.chi = chi
+        self.lambd = lambd
+        self.adj = adj
+        self.phi = phi
+        self.beta = beta
+        self.rBC = rCB
+        self.cB = cB
 
         # store firms in array
         self.firms = np.array([])
@@ -66,7 +80,7 @@ class Simulation:
     def findMatchings(self, time):
         for f in len(self.firms):
             # select potential partners, this is newFallBack
-            potentialPartners = np.ceil(np.random.uniform(size=chi)*self.numberOfBanks)
+            potentialPartners = np.ceil(np.random.uniform(size=self.chi)*self.numberOfBanks)
 
             # select best bank
             bestBankIndex = self.findBestBank(potentialPartners)
@@ -77,7 +91,7 @@ class Simulation:
 
             #compare old and new
             if (np.random.uniform(size=1) < \
-                    (1-exp(lambd*(newInterest - oldInterest) / newInterest))):
+                    (1-exp(self.lambd*(newInterest - oldInterest) / newInterest))):
                 #switch
                 self.changeFb[t] = self.changeFb[t] + 1
 
@@ -137,7 +151,7 @@ class Simulation:
                 firm.price = np.random.normal(self.alpha, self.varpf, 1)
                 self.link_fb[fnum] = np.ceil(np.random.uniform(size=1)*self.numberOfBanks)
                 maxFirmWealth = self.maxFrimWealth()
-                firm.interestRate = rCB + self.banks[self.link_fb[fnum]].interestRate + \
+                firm.interestRate = self.rCB + self.banks[self.link_fb[fnum]].interestRate + \
                                     self.gamma*(firm.leverage) / \
                                     ((1+firm.networth / maxFirmWealth))
             fnum += 1
@@ -145,6 +159,26 @@ class Simulation:
         for bank in self.banks:
             if(bank.default == 1):
                 bank.networth = 2 * np.random.uniform()
+
+    def updateInterestRates(self):
+        for b in self.banks:
+            b.interestRate = self.gamma * b.networth ** (-self.gamma)
+
+    def updateFrimDebt(self):
+        for f in self.firms:
+            f.debt = f.leverage * f.networth
+
+    def updateFirmCapital(self):
+        for f in self.firms:
+            f.totalCapital = f.networth + f.debt 
+
+    def updateFirmOutput(self):
+        for f in self.firms:
+            f.output = self.phi * self.totalCapital ** self.beta
+
+    def updateFirmPrice(self):
+        for f in self.firms:
+            f.price = np.random.normal(self.alpha, self.varpf, self.numberOfFirms)
 
     def updateLossRatio(self):
         for f in self.firms:
@@ -161,7 +195,7 @@ class Simulation:
             self.replaceDefaults()
 
             # update banks interest rates
-            Rb = self.gamma * Ab **(-self.gamma)
+            self.updateInterestRates()
 
             # find bank-firm matchings
             self.findMatchings(t)
@@ -172,16 +206,16 @@ class Simulation:
             lev[pf <= Rbf] = lev[pf <= Rbf] * (1 - adj*u[pj<=Rbf])
 
             # determine demand for loans
-            Bf = lev * Af
+            self.updateFirmDebt()
 
             # compute total financial capital
-            Kf = Af + Bf
+            self.updateFirmCapital()
 
             # compute output
-            Yf = phi * Kf ** beta
+            self.updateFrimOutput()
 
             # update price
-            pf = np.random.normal(self.alpha, self.varpf, self.numberOfFirms)
+            self.updateFirmPrice()
 
             # compute interest rate charged to firms
             Rbf = rCB + Rb(self.link_fb) + self.gamma*(lev) / ((1+Af/max(Af)))
