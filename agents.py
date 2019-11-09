@@ -1,6 +1,4 @@
 
-
-
 class Firm:
 
     def __init__(self,
@@ -12,6 +10,7 @@ class Firm:
         self.networth = 10
         self.interestRate = 0 # firm interestRate on loans
         self.leverage = 1
+        self.lgdf = 0 # loss-given default ratio
         self.default = False # (True=defaulted, False=surviving)
 
     def isDefaulted(self):
@@ -23,10 +22,12 @@ class Bank:
         self.interestRate = 0
         self.networth = 10
         self.deposit = 0
+        self.badDebt = 0
         self.profit = 0
         self.creditLinkDegree = 0
         self.nonPerformingLoans = 0
         self.default = False
+        self.customers = []
 
     def isDefaulted(self):
         return self.default

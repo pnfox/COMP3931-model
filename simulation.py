@@ -20,20 +20,20 @@ class Simulation:
 
         # store firms in array
         self.firms = np.array([])
-        for i in range(numberOfFirms):
-            f = agents.Firm(alpha, varpf)
+        for i in range(self.numberOfFirms):
+            f = agents.Firm(self.alpha, self.varpf)
             self.firms = np.append(self.firms, f)
 
         # store banks in array
         self.banks = np.array([])
-        for i in range(numberOfBanks):
+        for i in range(self.numberOfBanks):
             b = agents.Bank()
             self.banks = np.append(self.banks, b)
 
 
         Rb = np.array([]) # banks interest rate
         Ab = np.array([]) # banks net wealth
-        self.link_fb = np.array([0]*numberOfFirms) # firms-banks credit matching
+        self.link_fb = np.array([0]*self.numberOfFirms) # firms-banks credit matching
         Rbf = np.array([]) # firms interest rate on loans
         lev = np.array([]) # firms leverage
         pf = np.array([]) # firms price
@@ -47,7 +47,8 @@ class Simulation:
         Prb = np.array([]) # banks profits
         creditDegree = np.array([]) # banks credit link degree
 
-        self.link_fb[0:numberOfFirms] = np.ceil(np.random.uniform(size=numberOfFirms)*numberOfBanks)
+        self.link_fb[0:numberOfFirms] = np.ceil(np.random.uniform( \
+                                        size=self.numberOfFirms)*self.numberOfBanks)
 
         # Output variables
         self.changeFB = np.array([0]*self.time)
@@ -84,22 +85,39 @@ class Simulation:
 
                 self.link_fb[f] = bestBankIndex
             else:
-                self.link_fb[f]=self.link_fb[f]
+                self.link_fb[f] = self.link_fb[f]
 
         self.changeFB[t] = self.changeFB[t] / self.numberOfFirms
 
     def calculateDeposits(self):
         for bank in range(numberOfBanks):
-            D[bank] = np.sum(Bf[self.link_fb==bank])-Ab[bank]
-            if D[bank] < 0:
-                D[bank] = 0
+
+            banksTotalLoans = 0
+            for i in bank.customers:
+                bankTotalLoans += self.firms[i].debt
+
+            bank.deposit = banksTotalLoans - bank.networth
+            # bank has gone bankrupt
+            if bank.deposit < 0:
+                bank.deposit = 0
+
             # compute bad debt
-            Badb[bank] = np.sum(LGDf[fallf==1 and self.link_fb==bank] *
-                                Bf[fallf==1 and self.link_fb==bank])
+            bankBadDebt = 0
+            for i in bank.customers:
+                if self.firms[i].default:
+                    bankBadDebt += self.firms[i].lgdf * self.firms[i].debt
+
+            bank.badDebt = bankBadDebt
+
             # compute bank profits
-            Pjb[bank] = Bank[self.link_fb==bank and fallf==0] * \
-                        Rbf[self.link_fb==bank and fallf==0] - \
-                        rCB * D[bank] - cB * Ab[bank]-Badb[bank]
+            bankProfit = 0
+            for i in bank.customers:
+                customer = self.firm[i]
+                if customer.default:
+                    bankProfit += customer.debt * customer.interestRate - \
+                                self.rCB * bank.deposit - \
+                                self.cB * bank.networth - bank.badDebt
+            bank.profit = bankProfit
 
     def maxFirmWealth(self):
         maxWealth = -100000
@@ -128,13 +146,22 @@ class Simulation:
             if(bank.default == 1):
                 bank.networth = 2 * np.random.uniform()
 
+    def updateLossRatio(self):
+        for f in self.firms:
+            lossGivenRation = -f.networth / f.debt
+            if lossGivenRation > 1:
+                lossGivenRatio = 1
+            if lossGivenRatio < 0:
+                lossGivenRatio = 0
+            f.lgdf = lossGivenRatio
+
     def run(self):
         for t in range(self.time):
             # replace defaulted firms and banks
             self.replaceDefaults()
 
             # update banks interest rates
-            Rb = gamma * Ab **(-gamma)
+            Rb = self.gamma * Ab **(-self.gamma)
 
             # find bank-firm matchings
             self.findMatchings(t)
@@ -154,10 +181,10 @@ class Simulation:
             Yf = phi * Kf ** beta
 
             # update price
-            pf = np.random.normal(alpha, varpf, numberOfFirms)
+            pf = np.random.normal(self.alpha, self.varpf, self.numberOfFirms)
 
             # compute interest rate charged to firms
-            Rbf = rCB + Rb(self.link_fb) + gamma*(lev) / ((1+Af/max(Af)))
+            Rbf = rCB + Rb(self.link_fb) + self.gamma*(lev) / ((1+Af/max(Af)))
 
             # compute firms price
             Prf = pf * Yf - Rbf * Bf
@@ -168,9 +195,7 @@ class Simulation:
             fallf[Af <= 0] = 1
 
             # compute loss given default ratio
-            LGDf[0:numberOfFirms] = -(Af) / (Bf)
-            LGDf[LGDf > 1] = 1
-            LGDf[LGDf < 0] = 0
+            self.updateLossRatio()
 
             # compute deposits
             self.calculateDeposits()
