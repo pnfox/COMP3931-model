@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import math
 import agents
 
@@ -60,31 +60,37 @@ class Simulation:
                                         size=self.numberOfFirms)*self.numberOfBanks)
 
         # Output variables
-        self.changeFB = np.array([0]*self.time)
-        self.firmOutputReport = np.array([0]*self.time)
+        self.changeFB = np.array([0]*self.time, dtype=float)
+        self.firmOutputReport = np.array([0]*self.time, dtype=float)
+        self.firmCapitalReport = np.array([0]*self.time, dtype=float)
 
     def findBestBank(self, potentialPartners):
-        lowestInterest = 100000
-        for i in potentialPartners:
-            index = int(i)-1
-            if self.banks[index].interestRate < lowestInterest:
-                lowestInterest = self.banks[index].interestRate
-                best = index
+        bestInterest = np.amin(self.banks.interestRate)
+        if np.isnan(bestInterest):
+            print("Error: no bank with lowest interest")
+            print(self.banks.interestRate)
+            exit()
+        best = np.where(self.banks.interestRate == np.amin(self.banks.interestRate))[0]
+        if len(best) > 1:
+            best = best[np.random.randint(0, len(best))]
+        elif len(best) == 0:
+            print("Error: non bank with best interest rate ", bestInterest)
+            exit()
 
         return best
 
     # Find bank-firm links that form credit network
     def findMatchings(self, time):
-        for f in range(len(self.firms)):
+        for f in range(self.numberOfFirms):
             # select potential partners, this is newFallBack
             potentialPartners = np.ceil(np.random.uniform(size=self.chi)*self.numberOfBanks)
 
             # select best bank
             bestBankIndex = self.findBestBank(potentialPartners)
-            newInterest = self.banks[bestBankIndex].interestRate
+            newInterest = self.banks.interestRate[bestBankIndex]
 
             # pick up interest of old partner
-            oldInterest = self.banks[self.link_fb[f]-1].interestRate
+            oldInterest = self.banks.interestRate[self.link_fb[f]-1]
 
             #compare old and new
             if (np.random.uniform(size=1) < \
@@ -107,140 +113,135 @@ class Simulation:
 
     def calculateDeposits(self):
         bankIndex = 0
-        for bank in self.banks:
+        for bank in range(self.numberOfBanks):
             # find who is using bank
-            customers = self.findBankCustomers(bankIndex)
-            banksTotalLoans = 0
-            for i in customers:
-                banksTotalLoans += self.firms[i].debt
-
-            bank.deposit = banksTotalLoans - bank.networth
+            self.banks.deposit[bank] = np.sum(self.firms.debt[self.link_fb == bank] - self.banks.networth[bank])
 
             # bank has gone bankrupt
-            if bank.deposit < 0:
-                bank.deposit = 0
+            if self.banks.deposit[bank] < 0:
+                self.banks.deposit[bank] = 0
 
             # compute bad debt
-            bankBadDebt = 0
-            for i in customers:
-                if self.firms[i].default:
-                    bankBadDebt += self.firms[i].lgdf * self.firms[i].debt
-
-            bank.badDebt = bankBadDebt
+            defaultedFirmsWithBank = np.where(self.firms.default == 1) and np.where(self.link_fb == bank)
+            self.banks.badDebt[bank] = np.sum(self.firms.lgdf[defaultedFirmsWithBank] * \
+                                        self.firms.debt[defaultedFirmsWithBank])
 
             # compute bank profits
-            bankProfit = 0
-            for i in customers:
-                customer = self.firms[i]
-                if customer.default:
-                    bankProfit += customer.debt * customer.interestRate - \
-                                self.rCB * bank.deposit - \
-                                self.cB * bank.networth - bank.badDebt
-            bank.profit = bankProfit
+            nonDefaultedFirmsWithBank = np.where(self.firms.default == 0) and np.where(self.link_fb == bank)
+            p = np.dot(self.firms.debt[nonDefaultedFirmsWithBank], self.firms.interestRate[nonDefaultedFirmsWithBank]) - \
+                                self.rCB * self.banks.deposit[bank] - self.cB * \
+                                self.banks.networth[bank] - self.banks.badDebt[bank]
+            self.banks.profit[bank] = p
             bankIndex += 1
 
     def maxFirmWealth(self):
-        maxWealth = -100000
-        for f in self.firms:
-            if f.networth > maxWealth:
-                maxWealth = f.networth
-
-        return maxWealth
+        return np.amax(self.firms.networth) 
 
     # replace bankrupt banks and firms with new ones
     def replaceDefaults(self):
-        fnum = 0
-        for firm in self.firms:
-            if firm.default == 1:
-                firm.networth = 2 * np.random.uniform()
-                firm.leverage = 1
-                firm.price = np.random.normal(self.alpha, self.varpf, 1)
-                self.link_fb[fnum] = np.ceil(np.random.uniform(size=1)*self.numberOfBanks)
-                maxFirmWealth = self.maxFirmWealth()
-                firm.interestRate = self.rCB + self.banks[self.link_fb[fnum]-1].interestRate + \
-                                    self.gamma*(firm.leverage) / \
-                                    ((1+firm.networth / maxFirmWealth))
-            fnum += 1
+        maxFirmWealth = self.maxFirmWealth()
+        defaulted = np.where(self.firms.default == 1)
+        self.firms.networth[defaulted] = 2 * np.random.uniform(size=len(defaulted))
+        self.firms.leverage[defaulted] = 1
+        self.firms.price[defaulted] = np.random.normal(self.alpha, self.varpf, size=len(defaulted))
+        self.link_fb[defaulted] = np.ceil(np.random.uniform(size=len(defaulted))*self.numberOfBanks)
+        self.firms.interestRate[defaulted] = self.rCB + self.banks.interestRate[ \
+                self.link_fb[defaulted]-1] + self.gamma * \
+                (self.firms.leverage[defaulted] / ((1+self.firms.networth[defaulted] / maxFirmWealth)))
+        self.firms.default[defaulted] = 0
 
-        for bank in self.banks:
-            if(bank.default == 1):
-                bank.networth = 2 * np.random.uniform()
+        defaulted = np.where(self.banks.default == 1)
+        self.banks.networth[defaulted] = 2 * np.random.uniform(size=len(defaulted))
+        self.banks.default[defaulted] = 0
+        for i in self.banks.networth:
+            if i < 0:
+                print("Error: Banks with negative net worth")
+            if np.isnan(i):
+                print("Error: Banks with NAN networth exist")
+                print("Defaulted Banks: ", defaulted)
+                print("Networth: ", i)
+                exit()
 
     def updateInterestRates(self):
-        for b in self.banks:
-            b.interestRate = self.gamma * b.networth ** (-self.gamma)
+        self.banks.interestRate = self.gamma * np.float_power(self.banks.networth, -self.gamma)
 
     def updateFrimDebt(self):
-        for f in self.firms:
-            f.debt = f.leverage * f.networth
+        self.firms.debt = self.firms.leverage * self.firms.networth
 
     def updateFirmCapital(self):
-        for f in self.firms:
-            f.totalCapital = f.networth + f.debt 
+        self.firms.totalCapital = self.firms.networth + self.firms.debt
 
     def updateFirmOutput(self):
-        for f in self.firms:
-            f.output = self.phi * f.totalCapital ** self.beta
+        self.firms.output = self.phi * np.float_power(self.firms.totalCapital, self.beta)
 
     def updateFirmPrice(self):
-        for f in self.firms:
-            f.price = np.random.normal(self.alpha, self.varpf)
+        self.firms.price = np.random.normal(self.alpha, self.varpf, size=self.numberOfFirms)
 
     def updateFirmInterestRate(self):
-        firmIndex = 0
-        for f in self.firms:
+        for f in range(self.numberOfFirms):
             # interest of bank that firm uses
-            bankInterest = self.banks[self.link_fb[firmIndex]-1].interestRate
-            bestFirmWorth = self.bestFirm.networth
-            f.interestRate = self.rCB + bankInterest + \
-                             self.gamma*(f.leverage) / ((1+f.networth/bestFirmWorth))
-            firmIndex += 1
-
+            bankInterest = self.banks.interestRate[self.link_fb[f]-1]
+            bestFirmWorth = self.maxFirmWealth()
+            self.firms.interestRate[f] = self.rCB + bankInterest + \
+                             self.gamma*(self.firms.leverage[f]) / \
+                             ((1+self.firms.networth[f]/bestFirmWorth))
+        
     def updateFirmProfit(self):
-        for f in self.firms:
-            f.profit = f.price * f.output - f.interestRate * f.debt
+        self.firms.profit = self.firms.price * self.firms.output - self.firms.interestRate * self.firms.debt
 
     def updateFirmNetWorth(self):
-        for f in self.firms:
-            f.networth = f.networth + f.profit
-            if f.networth > 0:
-                f.default = 0
-            elif f.networth <= 0:
-                f.default = 1
+        self.firms.networth += self.firms.profit
+        # check if bankrupt
+        self.firms.default[self.firms.networth > 0] = 0
+        self.firms.default[self.firms.networth <= 0] = 1
 
     def updateBankNetWorth(self):
-        for b in self.banks:
-            b.networth += b.profit
-            if b.networth > 0:
-                b.default = 0
-            elif b.networth <= 0:
-                b.default = 1
+        self.banks.networth += self.banks.profit
+        # check if bankrupt
+        self.banks.default[self.banks.networth > 0] = 0
+        self.banks.default[self.banks.networth <= 0] = 1
 
     def updateFirmLeverage(self):
-        for f in self.firms:
-            u = np.random.uniform()
-            if f.price > f.interestRate:
-                f.leverage = f.leverage * (1 + self.adj * u)
-            elif f.price <= f.interestRate:
-                f.leverage = f.leverage * (1 - self.adj * u)
+        u = np.random.uniform(size=self.numberOfFirms)
+        firmsPriceGreaterInterest = self.firms.price > self.firms.interestRate
+        firmsPriceLessInterest = self.firms.price <= self.firms.interestRate
+
+        self.firms.leverage[firmsPriceGreaterInterest] = \
+                self.firms.leverage[firmsPriceGreaterInterest] * \
+                (1+self.adj * u[firmsPriceGreaterInterest])
+
+        self.firms.leverage[firmsPriceLessInterest] = \
+                self.firms.leverage[firmsPriceLessInterest] * \
+                (1-self.adj * u[firmsPriceLessInterest])
 
     def updateFirmDebt(self):
-        for f in self.firms:
-            f.debt = f.leverage * f.networth
+        self.firms.debt = self.firms.leverage * self.firms.networth
 
     def updateLossRatio(self):
-        for f in self.firms:
-            lossGivenRatio = -f.networth / f.debt
-            if lossGivenRatio > 1:
-                lossGivenRatio = 1
-            if lossGivenRatio < 0:
-                lossGivenRatio = 0
-            f.lgdf = lossGivenRatio
+        self.firms.lgdf = -self.firms.networth / self.firms.debt
+        self.firms.lgdf[self.firms.lgdf > 1] = 1
+        self.firms.lgdf[self.firms.lgdf < 0] = 0
 
     def run(self):
         for t in range(self.time):
             # replace defaulted firms and banks
             self.replaceDefaults()
+
+            if np.any(self.firms.networth <= 0):
+                print("Firm negative networth", np.where(self.firms.networth <= 0))
+            #    exit()
+        #    if np.any(self.firms.price <= 0):
+        #        print("Firm price negative", np.where(self.firms.price <= 0))
+        #        print(self.firms.price[np.where(self.firms.price <= 0)[0]])
+        #        print(self.firms.default[np.where(self.firms.price <= 0)[0]])
+        #        exit()
+            if np.any(self.banks.networth <= 0):
+                print("Banks negative networth at ", np.where(self.banks.networth <= 0))
+            #    exit()
+            if np.any(self.firms.totalCapital < 0):
+                print("Firms with negative total capital", len(np.where(self.firms.totalCapital <= 0)[0]))
+                print("Print at time: ", t)
+                exit()
 
             # update banks interest rates
             self.updateInterestRates()
@@ -264,11 +265,6 @@ class Simulation:
             self.updateFirmPrice()
 
             # find best firm
-            bestNetWorthFirm = -100000
-            for f in self.firms:
-                if f.networth > bestNetWorthFirm:
-                    self.bestFirm = f
-                    bestNetWorthFirm = f.networth
 
             # compute interest rate charged to firms
             self.updateFirmInterestRate()
@@ -288,10 +284,9 @@ class Simulation:
             # update banks net worth and check if defaulted
             self.updateBankNetWorth()
 
-            totalOutput = 0
-            for f in self.firms:
-                totalOutput += f.output
-
+            totalCapital = np.sum(self.firms.totalCapital)
+            totalOutput = np.sum(self.firms.output)
             self.firmOutputReport[t] = totalOutput
-        plt.plot(self.firmOutputReport)
-        plt.show()
+            self.firmCapitalReport[t] = totalCapital
+#        plt.plot(self.firmCapitalReport)
+#        plt.show()
