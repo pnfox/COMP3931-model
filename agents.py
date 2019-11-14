@@ -7,10 +7,11 @@ class Firms:
                 alpha, # mean of firms price
                 varpf # variance of firms price
                 ):
-        self.price = np.random.normal(alpha, varpf, numberOfFirms)
+        self.numberOfFirms = numberOfFirms
+        self.price = np.random.normal(size=numberOfFirms)*alpha + varpf
         self.debt = np.zeros(numberOfFirms)
-        self.networth = np.full_like(np.arange(numberOfFirms), 10)
-        self.profit = np.zeros(numberOfFirms)
+        self.networth = np.full_like(np.arange(numberOfFirms), 10, dtype=float)
+        self.profit = np.zeros(numberOfFirms, dtype=float)
         self.interestRate = np.zeros(numberOfFirms) # firm interestRate on loans
         self.leverage = np.ones(numberOfFirms)
         self.totalCapital = np.zeros(numberOfFirms)
@@ -25,14 +26,15 @@ class Banks:
 
     def __init__(self,
                 numberOfBanks):
-        self.interestRate = np.zeros(numberOfFirms)
-        self.networth = np.full_like(np.arange(numberOfFirms), 10)
-        self.deposit = np.zeros(numberOfFirms)
-        self.badDebt = np.zeros(numberOfFirms)
-        self.profit = np.zeros(numberOfFirms)
-        self.creditLinkDegree = np.zeros(numberOfFirms)
-        self.nonPerformingLoans = np.zeros(numberOfFirms)
-        self.default = np.zeros(numberOfFirms)
+        self.numberOfBanks = numberOfBanks
+        self.interestRate = np.zeros(numberOfBanks)
+        self.networth = np.full_like(np.arange(numberOfBanks), 10, dtype=float)
+        self.deposit = np.zeros(numberOfBanks)
+        self.badDebt = np.zeros(numberOfBanks)
+        self.profit = np.zeros(numberOfBanks)
+        self.creditLinkDegree = np.zeros(numberOfBanks)
+        self.nonPerformingLoans = np.zeros(numberOfBanks)
+        self.default = np.zeros(numberOfBanks)
 
     def isDefaulted(self):
         return np.bool(self.default[i])
