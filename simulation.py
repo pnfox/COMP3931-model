@@ -35,17 +35,9 @@ class Simulation:
         self.cB = cB
         self.bestFirm = 0
 
-        # store firms in array
-        self.firms = np.array([])
-        for i in range(self.numberOfFirms):
-            f = agents.Firm(self.alpha, self.varpf)
-            self.firms = np.append(self.firms, f)
+        self.firms = agents.Firms(numberOfFirms, self.alpha, self.varpf)
 
-        # store banks in array
-        self.banks = np.array([])
-        for i in range(self.numberOfBanks):
-            b = agents.Bank()
-            self.banks = np.append(self.banks, b)
+        self.banks = agents.Banks(numberOfBanks)
 
 
         Rb = np.array([]) # banks interest rate
