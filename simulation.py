@@ -48,21 +48,7 @@ class Simulation:
             self.banks = np.append(self.banks, b)
 
 
-        Rb = np.array([]) # banks interest rate
-        Ab = np.array([]) # banks net wealth
         self.link_fb = np.array([0]*self.numberOfFirms) # firms-banks credit matching
-        Rbf = np.array([]) # firms interest rate on loans
-        lev = np.array([]) # firms leverage
-        pf = np.array([]) # firms price
-        Bf = np.array([]) # firms net debt
-        Af = np.array([]) # firms net wealth
-        fallf = np.array([]) # firms defaults (1=defaulted, 0=surviving)
-        fallb = np.array([]) # banks defaults (1=defaulted, 0=surviving)
-        LGDF = np.array([]) # loss-given-default ratio
-        D = np.array([]) # deposits
-        Badb = np.array([]) # banks non performing loans
-        Prb = np.array([]) # banks profits
-        creditDegree = np.array([]) # banks credit link degree
 
         self.link_fb[0:numberOfFirms] = np.ceil(np.random.uniform( \
                                         size=self.numberOfFirms)*self.numberOfBanks)
