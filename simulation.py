@@ -2,6 +2,7 @@ import numpy as np
 #import matplotlib.pyplot as plt
 import math
 import agents
+import computate
 
 class Simulation:
 
@@ -166,10 +167,10 @@ class Simulation:
         self.banks.interestRate = self.gamma * np.float_power(self.banks.networth, -self.gamma)
 
     def updateFrimDebt(self):
-        self.firms.debt = self.firms.leverage * self.firms.networth
+        self.firms.debt = computate.multiply(self.firms.leverage, self.firms.networth)
 
     def updateFirmCapital(self):
-        self.firms.totalCapital = self.firms.networth + self.firms.debt
+        self.firms.totalCapital = computate.sum(self.firms.networth, self.firms.debt)
 
     def updateFirmOutput(self):
         self.firms.output = self.phi * np.float_power(self.firms.totalCapital, self.beta)
@@ -187,7 +188,11 @@ class Simulation:
                              ((1+self.firms.networth[f]/bestFirmWorth))
         
     def updateFirmProfit(self):
-        self.firms.profit = self.firms.price * self.firms.output - self.firms.interestRate * self.firms.debt
+        self.firms.profit = computate.minusMultiples(
+                                    self.firms.price,
+                                    self.firms.output,
+                                    self.firms.interestRate,
+                                    self.firms.debt)
 
     def updateFirmNetWorth(self):
         self.firms.networth += self.firms.profit
@@ -215,7 +220,7 @@ class Simulation:
                 (1-self.adj * u[firmsPriceLessInterest])
 
     def updateFirmDebt(self):
-        self.firms.debt = self.firms.leverage * self.firms.networth
+        self.firms.debt = computate.multiply(self.firms.leverage, self.firms.networth)
 
     def updateLossRatio(self):
         self.firms.lgdf = -self.firms.networth / self.firms.debt
