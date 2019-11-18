@@ -8,7 +8,7 @@ class Firms:
                 varpf # variance of firms price
                 ):
         self.numberOfFirms = numberOfFirms
-        self.price = np.random.normal(size=numberOfFirms)*alpha + varpf
+        self.price = np.random.normal(alpha, np.sqrt(varpf), size=numberOfFirms)
         self.debt = np.zeros(numberOfFirms)
         self.networth = np.full_like(np.arange(numberOfFirms), 10, dtype=float)
         self.profit = np.zeros(numberOfFirms, dtype=float)

@@ -55,23 +55,18 @@ class Simulation:
         self.firmCapitalReport = np.array([0]*self.time, dtype=float)
 
     def findBestBank(self, potentialPartners):
-        bestInterest = np.amin(self.banks.interestRate)
-        if np.isnan(bestInterest):
-            print("Error: no bank with lowest interest")
-            print(self.banks.interestRate)
-            exit()
-        best = np.where(self.banks.interestRate == np.amin(self.banks.interestRate))[0]
-        if len(best) > 1:
-            best = best[np.random.randint(0, len(best))]
-        elif len(best) == 0:
-            print("Error: non bank with best interest rate ", bestInterest)
-            exit()
+        bestInterest = np.inf
+        best = np.nan
+        for partner in potentialPartners:
+            if self.banks.interestRate[int(partner)] < bestInterest:
+                bestInterest = self.banks.interestRate[int(partner)]
+                best = int(partner)
 
         return best
 
     # Find bank-firm links that form credit network
     def findMatchings(self, time):
-        self.bankPools = np.ceil(np.random.uniform(0, self.numberOfBanks, \
+        self.bankPools = np.ceil(np.random.uniform(0, self.numberOfBanks-1, \
                             self.chi*self.numberOfFirms).reshape(self.numberOfFirms, self.chi))
         for f in range(self.numberOfFirms):
             # select potential partners, this is newFallBack
@@ -139,31 +134,27 @@ class Simulation:
         if defaulted.size == 0:
             return
 
-        self.firms.networth[defaulted] = 2 * np.random.uniform(size=len(defaulted))
-        self.firms.leverage[defaulted] = 1
-        self.firms.price[defaulted] = np.random.normal(self.alpha, self.varpf, size=len(defaulted))
+        # find new partners for defaulted firms
         banks = np.ceil(np.random.uniform(0, self.numberOfBanks-1, len(defaulted)))
         self.link_fb[defaulted] = 0
         j = 0
         for i in defaulted:
             self.link_fb[i][int(banks[j])] = 1
             j += 1
+
+        # update firm variables
+        self.firms.networth[defaulted] = np.random.uniform(2, size=len(defaulted))
+        self.firms.leverage[defaulted] = 1
+        self.firms.price[defaulted] = np.random.normal(self.alpha, np.sqrt(self.varpf), size=len(defaulted))
         self.firms.interestRate[defaulted] = self.rCB + self.banks.interestRate[ \
                 np.nonzero(self.link_fb[defaulted])[0][0]] + self.gamma * \
                 (self.firms.leverage[defaulted] / ((1+self.firms.networth[defaulted] / maxFirmWealth)))
         self.firms.default[defaulted] = 0
 
+        # replace defaulted banks
         defaulted = np.where(self.banks.default == 1)
-        self.banks.networth[defaulted] = 2 * np.random.uniform(size=len(defaulted))
+        self.banks.networth[defaulted] = np.random.uniform(2, size=len(defaulted))
         self.banks.default[defaulted] = 0
-        for i in self.banks.networth:
-            if i < 0:
-                print("Error: Banks with negative net worth")
-            if np.isnan(i):
-                print("Error: Banks with NAN networth exist")
-                print("Defaulted Banks: ", defaulted)
-                print("Networth: ", i)
-                exit()
 
     def updateInterestRates(self):
         self.banks.interestRate = self.gamma * np.float_power(self.banks.networth, -self.gamma)
@@ -178,7 +169,7 @@ class Simulation:
         self.firms.output = self.phi * np.float_power(self.firms.totalCapital, self.beta)
 
     def updateFirmPrice(self):
-        self.firms.price = np.random.normal(self.alpha, self.varpf, size=self.numberOfFirms)
+        self.firms.price = np.random.normal(self.alpha, np.sqrt(self.varpf), size=self.numberOfFirms)
 
     def updateFirmInterestRate(self):
         for f in range(self.numberOfFirms):
