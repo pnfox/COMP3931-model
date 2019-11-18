@@ -39,11 +39,15 @@ class Simulation:
 
         self.banks = agents.Banks(numberOfBanks)
 
+        # firms-banks credit matching adjacency matrix
+        self.link_fb = np.zeros((numberOfFirms, numberOfBanks))
+        banksWithFirms = np.ceil(np.random.uniform(0, self.numberOfBanks-1, self.numberOfFirms))
+        for i in range(self.numberOfFirms):
+            self.link_fb[i][int(banksWithFirms[i])] = 1
 
-        self.link_fb = np.array([0]*self.numberOfFirms) # firms-banks credit matching
 
-        self.link_fb[0:numberOfFirms] = np.ceil(np.random.uniform( \
-                                        size=self.numberOfFirms)*self.numberOfBanks)
+        # contains banks that firms use as lookup for interestRates
+        self.bankPools = np.zeros((self.numberOfFirms, self.chi))
 
         # Output variables
         self.changeFB = np.array([0]*self.time, dtype=float)
@@ -67,53 +71,58 @@ class Simulation:
 
     # Find bank-firm links that form credit network
     def findMatchings(self, time):
+        self.bankPools = np.ceil(np.random.uniform(0, self.numberOfBanks, \
+                            self.chi*self.numberOfFirms).reshape(self.numberOfFirms, self.chi))
         for f in range(self.numberOfFirms):
             # select potential partners, this is newFallBack
-            potentialPartners = np.ceil(np.random.uniform(size=self.chi)*self.numberOfBanks)
+            potentialPartners = self.bankPools[f]
 
             # select best bank
             bestBankIndex = self.findBestBank(potentialPartners)
             newInterest = self.banks.interestRate[bestBankIndex]
 
             # pick up interest of old partner
-            oldInterest = self.banks.interestRate[self.link_fb[f]-1]
+            currentBank = np.nonzero(self.link_fb[f])
+            if not currentBank[0]:
+                oldInterest = np.nan
+            else:
+                oldInterest = self.banks.interestRate[currentBank[0][0]]
 
             #compare old and new
-            if (np.random.uniform(size=1) < \
-                    (1-math.exp(self.lambd*(newInterest - oldInterest) / newInterest))):
+            if (newInterest < oldInterest):
                 #switch
                 self.changeFB[time] = self.changeFB[time] + 1
 
                 # TODO: check for multiple best banks
 
                 # update link
-                self.link_fb[f] = bestBankIndex
-            else:
-                self.link_fb[f] = self.link_fb[f]
+                self.link_fb[f] = 0
+                self.link_fb[f][bestBankIndex] = 1
 
         self.changeFB[time] = self.changeFB[time] / self.numberOfFirms
 
     # find who is using bank i
     def findBankCustomers(self, i):
-        return np.where(self.link_fb == i)[0]
+        return np.nonzero(self.link_fb.transpose()[i])[0]
 
     def calculateDeposits(self):
         bankIndex = 0
         for bank in range(self.numberOfBanks):
             # find who is using bank
-            self.banks.deposit[bank] = np.sum(self.firms.debt[self.link_fb == bank] - self.banks.networth[bank])
+            bankCustomers = self.findBankCustomers(bank)
+            self.banks.deposit[bank] = np.sum(self.firms.debt[bankCustomers] - self.banks.networth[bank])
 
             # bank has gone bankrupt
             if self.banks.deposit[bank] < 0:
                 self.banks.deposit[bank] = 0
 
             # compute bad debt
-            defaultedFirmsWithBank = np.where(self.firms.default == 1) and np.where(self.link_fb == bank)
+            defaultedFirmsWithBank = np.where(self.firms.default == 1) and bankCustomers
             self.banks.badDebt[bank] = np.sum(self.firms.lgdf[defaultedFirmsWithBank] * \
                                         self.firms.debt[defaultedFirmsWithBank])
 
             # compute bank profits
-            nonDefaultedFirmsWithBank = np.where(self.firms.default == 0) and np.where(self.link_fb == bank)
+            nonDefaultedFirmsWithBank = np.where(self.firms.default == 0) and bankCustomers
             p = np.dot(self.firms.debt[nonDefaultedFirmsWithBank], self.firms.interestRate[nonDefaultedFirmsWithBank]) - \
                                 self.rCB * self.banks.deposit[bank] - self.cB * \
                                 self.banks.networth[bank] - self.banks.badDebt[bank]
@@ -126,13 +135,21 @@ class Simulation:
     # replace bankrupt banks and firms with new ones
     def replaceDefaults(self):
         maxFirmWealth = self.maxFirmWealth()
-        defaulted = np.where(self.firms.default == 1)
+        defaulted = np.where(self.firms.default == 1)[0]
+        if defaulted.size == 0:
+            return
+
         self.firms.networth[defaulted] = 2 * np.random.uniform(size=len(defaulted))
         self.firms.leverage[defaulted] = 1
         self.firms.price[defaulted] = np.random.normal(self.alpha, self.varpf, size=len(defaulted))
-        self.link_fb[defaulted] = np.ceil(np.random.uniform(size=len(defaulted))*self.numberOfBanks)
+        banks = np.ceil(np.random.uniform(0, self.numberOfBanks-1, len(defaulted)))
+        self.link_fb[defaulted] = 0
+        j = 0
+        for i in defaulted:
+            self.link_fb[i][int(banks[j])] = 1
+            j += 1
         self.firms.interestRate[defaulted] = self.rCB + self.banks.interestRate[ \
-                self.link_fb[defaulted]-1] + self.gamma * \
+                np.nonzero(self.link_fb[defaulted])[0][0]] + self.gamma * \
                 (self.firms.leverage[defaulted] / ((1+self.firms.networth[defaulted] / maxFirmWealth)))
         self.firms.default[defaulted] = 0
 
@@ -166,7 +183,8 @@ class Simulation:
     def updateFirmInterestRate(self):
         for f in range(self.numberOfFirms):
             # interest of bank that firm uses
-            bankInterest = self.banks.interestRate[self.link_fb[f]-1]
+            currentBank = np.nonzero(self.link_fb[f])[0]
+            bankInterest = self.banks.interestRate[currentBank[0]]
             bestFirmWorth = self.maxFirmWealth()
             self.firms.interestRate[f] = self.rCB + bankInterest + \
                              self.gamma*(self.firms.leverage[f]) / \
@@ -209,6 +227,7 @@ class Simulation:
         self.firms.lgdf[self.firms.lgdf < 0] = 0
 
     def run(self):
+        print("Running Simulation...")
         for t in range(self.time):
             # replace defaulted firms and banks
             self.replaceDefaults()
