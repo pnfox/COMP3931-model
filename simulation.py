@@ -55,23 +55,18 @@ class Simulation:
         self.firmCapitalReport = np.array([0]*self.time, dtype=float)
 
     def findBestBank(self, potentialPartners):
-        bestInterest = np.amin(self.banks.interestRate)
-        if np.isnan(bestInterest):
-            print("Error: no bank with lowest interest")
-            print(self.banks.interestRate)
-            exit()
-        best = np.where(self.banks.interestRate == np.amin(self.banks.interestRate))[0]
-        if len(best) > 1:
-            best = best[np.random.randint(0, len(best))]
-        elif len(best) == 0:
-            print("Error: non bank with best interest rate ", bestInterest)
-            exit()
+        bestInterest = np.inf
+        best = np.nan
+        for partner in potentialPartners:
+            if self.banks.interestRate[int(partner)] < bestInterest:
+                bestInterest = self.banks.interestRate[int(partner)]
+                best = int(partner)
 
         return best
 
     # Find bank-firm links that form credit network
     def findMatchings(self, time):
-        self.bankPools = np.ceil(np.random.uniform(0, self.numberOfBanks, \
+        self.bankPools = np.ceil(np.random.uniform(0, self.numberOfBanks-1, \
                             self.chi*self.numberOfFirms).reshape(self.numberOfFirms, self.chi))
         for f in range(self.numberOfFirms):
             # select potential partners, this is newFallBack
