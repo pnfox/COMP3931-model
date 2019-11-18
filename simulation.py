@@ -207,8 +207,14 @@ class Simulation:
 
     def updateFirmLeverage(self):
         u = np.random.uniform(size=self.numberOfFirms)
-        firmsPriceGreaterInterest = self.firms.price > self.firms.interestRate
-        firmsPriceLessInterest = self.firms.price <= self.firms.interestRate
+        firmsPriceGreaterInterest = []
+        firmsPriceLessInterest = []
+
+        for i in range(self.numberOfFirms):
+            if self.firms.price[i] > self.firms.interestRate[i]:
+                firmsPriceGreaterInterest.append(i)
+            else:
+                firmsPriceLessInterest.append(i)
 
         self.firms.leverage[firmsPriceGreaterInterest] = \
                 self.firms.leverage[firmsPriceGreaterInterest] * \
