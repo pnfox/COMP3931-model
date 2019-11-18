@@ -215,15 +215,10 @@ class Simulation:
 
             if np.any(self.firms.networth <= 0):
                 print("Firm negative networth", np.where(self.firms.networth <= 0))
-            #    exit()
-        #    if np.any(self.firms.price <= 0):
-        #        print("Firm price negative", np.where(self.firms.price <= 0))
-        #        print(self.firms.price[np.where(self.firms.price <= 0)[0]])
-        #        print(self.firms.default[np.where(self.firms.price <= 0)[0]])
-        #        exit()
+                exit()
             if np.any(self.banks.networth <= 0):
                 print("Banks negative networth at ", np.where(self.banks.networth <= 0))
-            #    exit()
+                exit()
             if np.any(self.firms.totalCapital < 0):
                 print("Firms with negative total capital", len(np.where(self.firms.totalCapital <= 0)[0]))
                 print("Print at time: ", t)
