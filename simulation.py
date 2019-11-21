@@ -57,6 +57,9 @@ class Simulation:
         # contains banks that firms use as lookup for interestRates
         self.bankPools = np.zeros((self.numberOfFirms, self.chi))
 
+        self.fileName = "results/" + str(self.seed) + ".csv"
+        self.outputFile = open(self.fileName, "w+")
+
         # Output variables
         self.changeFB = np.array([0]*self.time, dtype=float)
         self.firmOutputReport = np.array([0]*self.time, dtype=float)
@@ -233,6 +236,26 @@ class Simulation:
         self.firms.lgdf[self.firms.lgdf > 1] = 1
         self.firms.lgdf[self.firms.lgdf < 0] = 0
 
+    def saveResults(self):
+        output = np.concatenate((self.firms.price,
+                                self.firms.debt,
+                                self.firms.networth,
+                                self.firms.profit,
+                                self.firms.interestRate,
+                                self.firms.leverage,
+                                self.firms.totalCapital,
+                                self.firms.output,
+                                self.firms.lgdf,
+                                self.firms.default,
+                                self.banks.interestRate,
+                                self.banks.networth,
+                                self.banks.deposit,
+                                self.banks.badDebt,
+                                self.banks.profit,
+                                self.banks.nonPerformingLoans,
+                                self.banks.default))
+        np.savetxt(self.outputFile, output.transpose(), newline=" ")
+
     def run(self):
         print("Running Simulation...")
         for t in range(self.time):
@@ -295,5 +318,9 @@ class Simulation:
             totalOutput = np.sum(self.firms.output)
             self.firmOutputReport[t] = totalOutput
             self.firmCapitalReport[t] = totalCapital
+
+            self.saveResults()
+        self.outputFile.close()
 #       plt.plot(self.firmCapitalReport)
 #        plt.show()
+
