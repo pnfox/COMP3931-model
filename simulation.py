@@ -254,7 +254,8 @@ class Simulation:
                                 self.banks.profit,
                                 self.banks.nonPerformingLoans,
                                 self.banks.default))
-        np.savetxt(self.outputFile, output.transpose(), newline=" ")
+        np.savetxt(self.outputFile, output.transpose(), newline=" ", delimiter=",")
+        self.outputFile.write("\n")
 
     def run(self):
         print("Running Simulation...")
@@ -321,6 +322,7 @@ class Simulation:
 
             self.saveResults()
         self.outputFile.close()
+        print("Results wrote to " + self.outputFile)
 #       plt.plot(self.firmCapitalReport)
 #        plt.show()
 
