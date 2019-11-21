@@ -36,7 +36,12 @@ class Simulation:
         self.cB = cB
         self.bestFirm = 0
 
-        np.random.seed(seed)
+        if seed == None:
+            self.seed = np.random.randint(9000)
+        else:
+            self.seed = seed
+
+        np.random.seed(self.seed)
 
         self.firms = agents.Firms(numberOfFirms, self.alpha, self.varpf)
 
