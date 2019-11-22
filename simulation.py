@@ -1,5 +1,4 @@
 import numpy as np
-#import matplotlib.pyplot as plt
 import math
 import agents
 
@@ -58,12 +57,19 @@ class Simulation:
         self.bankPools = np.zeros((self.numberOfFirms, self.chi))
 
         self.fileName = "results/" + str(self.seed) + ".csv"
-        self.outputFile = open(self.fileName, "w+")
 
         # Output variables
         self.changeFB = np.array([0]*self.time, dtype=float)
         self.firmOutputReport = np.array([0]*self.time, dtype=float)
         self.firmCapitalReport = np.array([0]*self.time, dtype=float)
+        self.firmWealthReport = np.array([0]*self.time, dtype=float)
+        self.firmDebtReport = np.array([0]*self.time, dtype=float)
+        self.firmProfitReport = np.array([0]*self.time, dtype=float)
+        self.firmDefaultReport = np.array([0]*self.time, dtype=float)
+
+        self.bankWealthReport = np.array([0]*self.time, dtype=float)
+        self.bankProfitReport = np.array([0]*self.time, dtype=float)
+        self.bankDefaultReport = np.array([0]*self.time, dtype=float)
 
     def findBestBank(self, potentialPartners):
         bestInterest = np.inf
@@ -236,26 +242,35 @@ class Simulation:
         self.firms.lgdf[self.firms.lgdf > 1] = 1
         self.firms.lgdf[self.firms.lgdf < 0] = 0
 
+    def reportResults(self, time):
+        totalCapital = np.sum(self.firms.totalCapital)
+        totalOutput = np.sum(self.firms.output)
+        self.firmOutputReport[time] = totalOutput
+        self.firmCapitalReport[time] = totalCapital
+        self.firmWealthReport[time] = np.sum(self.firms.networth)
+        self.firmDebtReport[time] = np.sum(self.firms.debt)
+        self.firmProfitReport[time] = np.sum(self.firms.profit)
+        self.firmDefaultReport[time] = np.count_nonzero(self.firms.default)
+        self.bankWealthReport[time] = np.sum(self.banks.networth)
+        self.bankProfitReport[time] = np.sum(self.banks.profit)
+        self.bankDefaultReport[time] = np.count_nonzero(self.banks.default)
+
     def saveResults(self):
-        output = np.concatenate((self.firms.price,
-                                self.firms.debt,
-                                self.firms.networth,
-                                self.firms.profit,
-                                self.firms.interestRate,
-                                self.firms.leverage,
-                                self.firms.totalCapital,
-                                self.firms.output,
-                                self.firms.lgdf,
-                                self.firms.default,
-                                self.banks.interestRate,
-                                self.banks.networth,
-                                self.banks.deposit,
-                                self.banks.badDebt,
-                                self.banks.profit,
-                                self.banks.nonPerformingLoans,
-                                self.banks.default))
-        np.savetxt(self.outputFile, output.transpose(), newline=" ", delimiter=",")
-        self.outputFile.write("\n")
+        print("Writing results to " + self.fileName)
+        f = open(self.fileName, "w+")
+        output = np.stack((self.firmOutputReport,
+                                self.firmCapitalReport,
+                                self.firmWealthReport,
+                                self.firmDebtReport,
+                                self.firmProfitReport,
+                                self.firmDefaultReport,
+                                self.bankWealthReport,
+                                self.bankProfitReport,
+                                self.bankDefaultReport))
+        print(self.firmOutputReport[0:10])
+        print(self.firmCapitalReport[0:10])
+        np.savetxt(f, output.transpose(), delimiter=",")
+        f.close()
 
     def run(self):
         print("Running Simulation...")
@@ -315,14 +330,7 @@ class Simulation:
             # update banks net worth and check if defaulted
             self.updateBankNetWorth()
 
-            totalCapital = np.sum(self.firms.totalCapital)
-            totalOutput = np.sum(self.firms.output)
-            self.firmOutputReport[t] = totalOutput
-            self.firmCapitalReport[t] = totalCapital
+            self.reportResults(t)
 
-            self.saveResults()
-        self.outputFile.close()
-        print("Results wrote to " + self.outputFile)
-#       plt.plot(self.firmCapitalReport)
-#        plt.show()
+        self.saveResults()
 
