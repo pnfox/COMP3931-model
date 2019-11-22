@@ -19,6 +19,7 @@ class MonteCarlo:
             beta, # production function parameter
             rCB, # central bank interest rate
             cB, # banks costs
+            seed=None,
             ):
         self.simulationTime = simulationTime
         self.numberOfFirms = numberOfFirms
@@ -33,6 +34,7 @@ class MonteCarlo:
         self.beta = beta # production function parameter
         self.rCB = rCB # central bank interest rate
         self.cB = cB # banks costs
+        self.seed = seed
 
         # output variables: Each col for monte carlo run, each row for sim round
         self.changeFB = np.array([]) # switching rate report
@@ -56,7 +58,7 @@ class MonteCarlo:
         s = simulation.Simulation(simulationTime, self.numberOfFirms,
                 self.numberOfBanks, self.alpha, self.varpf, self.gamma,
                 self.chi, self.lambd, self.adj, self.phi, self.beta,
-                self.rCB, self.cB)
+                self.rCB, self.cB, self.seed)
         s.run()
 
 if __name__=="__main__":

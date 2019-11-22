@@ -1,5 +1,4 @@
 import numpy as np
-#import matplotlib.pyplot as plt
 import math
 import agents
 
@@ -19,6 +18,7 @@ class Simulation:
             beta, # production function parameter
             rCB, # central bank interest rate
             cB, # banks costs
+            seed=None,
             ):
         self.time = time
         self.numberOfFirms = numberOfFirms
@@ -35,6 +35,13 @@ class Simulation:
         self.cB = cB
         self.bestFirm = 0
 
+        if seed == None:
+            self.seed = np.random.randint(9000)
+        else:
+            self.seed = seed
+
+        np.random.seed(self.seed)
+
         self.firms = agents.Firms(numberOfFirms, self.alpha, self.varpf)
 
         self.banks = agents.Banks(numberOfBanks)
@@ -49,10 +56,20 @@ class Simulation:
         # contains banks that firms use as lookup for interestRates
         self.bankPools = np.zeros((self.numberOfFirms, self.chi))
 
+        self.fileName = "results/" + str(self.seed) + ".csv"
+
         # Output variables
         self.changeFB = np.array([0]*self.time, dtype=float)
         self.firmOutputReport = np.array([0]*self.time, dtype=float)
         self.firmCapitalReport = np.array([0]*self.time, dtype=float)
+        self.firmWealthReport = np.array([0]*self.time, dtype=float)
+        self.firmDebtReport = np.array([0]*self.time, dtype=float)
+        self.firmProfitReport = np.array([0]*self.time, dtype=float)
+        self.firmDefaultReport = np.array([0]*self.time, dtype=float)
+
+        self.bankWealthReport = np.array([0]*self.time, dtype=float)
+        self.bankProfitReport = np.array([0]*self.time, dtype=float)
+        self.bankDefaultReport = np.array([0]*self.time, dtype=float)
 
     def findBestBank(self, potentialPartners):
         bestInterest = np.inf
@@ -79,7 +96,7 @@ class Simulation:
             # pick up interest of old partner
             currentBank = np.nonzero(self.link_fb[f])
             if not currentBank[0]:
-                oldInterest = np.nan
+                oldInterest = np.inf
             else:
                 oldInterest = self.banks.interestRate[currentBank[0][0]]
 
@@ -87,8 +104,6 @@ class Simulation:
             if (newInterest < oldInterest):
                 #switch
                 self.changeFB[time] = self.changeFB[time] + 1
-
-                # TODO: check for multiple best banks
 
                 # update link
                 self.link_fb[f] = 0
@@ -105,7 +120,7 @@ class Simulation:
         for bank in range(self.numberOfBanks):
             # find who is using bank
             bankCustomers = self.findBankCustomers(bank)
-            self.banks.deposit[bank] = np.sum(self.firms.debt[bankCustomers] - self.banks.networth[bank])
+            self.banks.deposit[bank] = np.sum(self.firms.debt[bankCustomers]) - self.banks.networth[bank]
 
             # bank has gone bankrupt
             if self.banks.deposit[bank] < 0:
@@ -155,6 +170,10 @@ class Simulation:
         defaulted = np.where(self.banks.default == 1)
         self.banks.networth[defaulted] = np.random.uniform(2, size=len(defaulted))
         self.banks.default[defaulted] = 0
+
+        if np.any(np.where(self.firms.default == 1)):
+            print("Error: Defaulted firms not removed")
+            exit()
 
     def updateInterestRates(self):
         self.banks.interestRate = self.gamma * np.float_power(self.banks.networth, -self.gamma)
@@ -223,6 +242,36 @@ class Simulation:
         self.firms.lgdf[self.firms.lgdf > 1] = 1
         self.firms.lgdf[self.firms.lgdf < 0] = 0
 
+    def reportResults(self, time):
+        totalCapital = np.sum(self.firms.totalCapital)
+        totalOutput = np.sum(self.firms.output)
+        self.firmOutputReport[time] = totalOutput
+        self.firmCapitalReport[time] = totalCapital
+        self.firmWealthReport[time] = np.sum(self.firms.networth)
+        self.firmDebtReport[time] = np.sum(self.firms.debt)
+        self.firmProfitReport[time] = np.sum(self.firms.profit)
+        self.firmDefaultReport[time] = np.count_nonzero(self.firms.default)
+        self.bankWealthReport[time] = np.sum(self.banks.networth)
+        self.bankProfitReport[time] = np.sum(self.banks.profit)
+        self.bankDefaultReport[time] = np.count_nonzero(self.banks.default)
+
+    def saveResults(self):
+        print("Writing results to " + self.fileName)
+        f = open(self.fileName, "w+")
+        output = np.stack((self.firmOutputReport,
+                                self.firmCapitalReport,
+                                self.firmWealthReport,
+                                self.firmDebtReport,
+                                self.firmProfitReport,
+                                self.firmDefaultReport,
+                                self.bankWealthReport,
+                                self.bankProfitReport,
+                                self.bankDefaultReport))
+        print(self.firmOutputReport[0:10])
+        print(self.firmCapitalReport[0:10])
+        np.savetxt(f, output.transpose(), delimiter=",")
+        f.close()
+
     def run(self):
         print("Running Simulation...")
         for t in range(self.time):
@@ -281,9 +330,7 @@ class Simulation:
             # update banks net worth and check if defaulted
             self.updateBankNetWorth()
 
-            totalCapital = np.sum(self.firms.totalCapital)
-            totalOutput = np.sum(self.firms.output)
-            self.firmOutputReport[t] = totalOutput
-            self.firmCapitalReport[t] = totalCapital
-#        plt.plot(self.firmCapitalReport)
-#        plt.show()
+            self.reportResults(t)
+
+        self.saveResults()
+
