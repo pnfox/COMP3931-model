@@ -174,6 +174,15 @@ class Simulation:
         if np.any(np.where(self.firms.default == 1)):
             print("Error: Defaulted firms not removed")
             exit()
+        if np.any(self.firms.networth <= 0):
+            print("Firm negative networth", np.where(self.firms.networth <= 0))
+            exit()
+        if np.any(self.banks.networth <= 0):
+            print("Banks negative networth at ", np.where(self.banks.networth <= 0))
+            exit()
+        if np.any(self.firms.totalCapital < 0):
+            print("Firms with negative total capital", len(np.where(self.firms.totalCapital <= 0)[0]))
+            exit()
 
     def updateInterestRates(self):
         self.banks.interestRate = self.gamma * np.float_power(self.banks.networth, -self.gamma)
@@ -267,8 +276,6 @@ class Simulation:
                                 self.bankWealthReport,
                                 self.bankProfitReport,
                                 self.bankDefaultReport))
-        print(self.firmOutputReport[0:10])
-        print(self.firmCapitalReport[0:10])
         np.savetxt(f, output.transpose(), delimiter=",")
         f.close()
 
