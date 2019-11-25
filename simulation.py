@@ -172,17 +172,13 @@ class Simulation:
         self.banks.default[defaulted] = 0
 
         if np.any(np.where(self.firms.default == 1)):
-            print("Error: Defaulted firms not removed")
-            exit()
+            raise Exception("Error: Defaulted firms not removed")
         if np.any(self.firms.networth <= 0):
-            print("Firm negative networth", np.where(self.firms.networth <= 0))
-            exit()
+            raise Exception("Firm negative networth", np.where(self.firms.networth <= 0))
         if np.any(self.banks.networth <= 0):
-            print("Banks negative networth at ", np.where(self.banks.networth <= 0))
-            exit()
+            raise Exception("Banks negative networth at ", np.where(self.banks.networth <= 0))
         if np.any(self.firms.totalCapital < 0):
-            print("Firms with negative total capital", len(np.where(self.firms.totalCapital <= 0)[0]))
-            exit()
+            raise Exception("Firms with negative total capital", len(np.where(self.firms.totalCapital <= 0)[0]))
 
     def updateInterestRates(self):
         self.banks.interestRate = self.gamma * np.float_power(self.banks.networth, -self.gamma)
@@ -283,17 +279,10 @@ class Simulation:
         print("Running Simulation...")
         for t in range(self.time):
             # replace defaulted firms and banks
-            self.replaceDefaults()
-
-            if np.any(self.firms.networth <= 0):
-                print("Firm negative networth", np.where(self.firms.networth <= 0))
-                exit()
-            if np.any(self.banks.networth <= 0):
-                print("Banks negative networth at ", np.where(self.banks.networth <= 0))
-                exit()
-            if np.any(self.firms.totalCapital < 0):
-                print("Firms with negative total capital", len(np.where(self.firms.totalCapital <= 0)[0]))
-                print("Print at time: ", t)
+            try:
+                self.replaceDefaults()
+            except Exception as e:
+                print(e)
                 exit()
 
             # update banks interest rates
