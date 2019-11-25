@@ -65,6 +65,7 @@ class Simulation:
         self.firmWealthReport = np.array([0]*self.time, dtype=float)
         self.firmDebtReport = np.array([0]*self.time, dtype=float)
         self.firmProfitReport = np.array([0]*self.time, dtype=float)
+        self.firmAvgPrice = np.array([0]*self.time, dtype=float)
         self.firmDefaultReport = np.array([0]*self.time, dtype=float)
 
         self.bankWealthReport = np.array([0]*self.time, dtype=float)
@@ -255,6 +256,7 @@ class Simulation:
         self.firmWealthReport[time] = np.sum(self.firms.networth)
         self.firmDebtReport[time] = np.sum(self.firms.debt)
         self.firmProfitReport[time] = np.sum(self.firms.profit)
+        self.firmAvgPrice[time] = np.sum(self.firms.price)
         self.firmDefaultReport[time] = np.count_nonzero(self.firms.default)
         self.bankWealthReport[time] = np.sum(self.banks.networth)
         self.bankProfitReport[time] = np.sum(self.banks.profit)
@@ -268,6 +270,7 @@ class Simulation:
                                 self.firmWealthReport,
                                 self.firmDebtReport,
                                 self.firmProfitReport,
+                                self.firmAvgPrice,
                                 self.firmDefaultReport,
                                 self.bankWealthReport,
                                 self.bankProfitReport,
