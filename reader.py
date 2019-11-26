@@ -3,6 +3,28 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
+def plot(data, data2=None, data3=None, data4=None):
+    fig, ax = plt.subplots()
+    try:
+        for i in [data, data2, data3, data4]:
+            if i == None:
+                continue
+            if (len(i) != 2) or (type(i[0]) is not np.ndarray) \
+                    or (type(i[1]) is not str):
+                raise ValueError("Error plot: data must be tuple of the form (array, str)")
+        fig1 = ax.plot(data[0], label=data[1])
+        if not data2 == None:
+            fig2 = ax.plot(data2[0], label=data2[1])
+        if not data3 == None:
+            fig3 = ax.plot(data3[0], label=data3[1])
+        if not data4 == None:
+            fig4 = ax.plot(data4[0], label=data4[1])
+        ax.legend()
+        fig.show()
+    except NameError:
+        print("Error plot: data must be passed to function")
+        return
+
 files = glob.glob("results/*.csv")
 choice = 0
 if len(files) == 0:
