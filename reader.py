@@ -25,6 +25,15 @@ def plot(data, data2=None, data3=None, data4=None):
         print("Error plot: data must be passed to function")
         return
 
+def checkChange(data, data2):
+    for i in range(1, len(data)):
+        changeInData1 = data[i] - data[i-1]
+        changeInData2 = data2[i] - data2[i-1]
+        if changeInData1 * changeInData2 < 0:
+            print("Change not off the same sign at " + str(i))
+            print("Change in data1: " + str(changeInData1))
+            print("Change in data2: " + str(changeInData2))
+
 files = glob.glob("results/*.csv")
 choice = 0
 if len(files) == 0:
