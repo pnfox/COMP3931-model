@@ -61,26 +61,28 @@ except FileNotFoundError:
     print("No file found")
     exit()
 
-firmOutput = np.array([], dtype=float)
-firmCapital = np.array([], dtype=float)
-firmWealth = np.array([], dtype=float)
-firmDebt = np.array([], dtype=float)
-firmProfit = np.array([], dtype=float)
-firmPrice = np.array([], dtype=float)
-firmDefault = np.array([], dtype=float)
+overall = []
+for i in range(7):
+    array = np.array([], dtype=float)
+    overall.append(array)
+
 bankWealth = np.array([], dtype=float)
 bankProfit = np.array([], dtype=float)
 bankDefault = np.array([], dtype=float)
+
+individual = []
+for i in range(7):
+    array = np.array([], dtype=float)
+    individual.append(array)
+
+index = 0
 for l in lines:
     l = np.asarray(l, dtype=float)
-    firmOutput = np.append(firmOutput, l[0])
-    firmCapital = np.append(firmCapital, l[1])
-    firmWealth = np.append(firmWealth, l[2])
-    firmDebt = np.append(firmDebt, l[3])
-    firmProfit = np.append(firmProfit, l[4])
-    firmPrice = np.append(firmPrice, l[5])
-    firmDefault = np.append(firmDefault, l[6])
-    bankWealth = np.append(bankWealth, l[7])
-    bankProfit = np.append(bankProfit, l[7])
-    bankDefault = np.append(bankDefault, l[9])
+    if index % 2 == 0:
+        for i in range(7):
+            overall[i] = np.append(overall[i], l[i])
+    else:
+        for i in range(7):
+            individual[i] = np.append(individual[i], l[i])
 
+    index += 1
