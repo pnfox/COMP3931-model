@@ -60,17 +60,18 @@ class Simulation:
 
         # Output variables
         self.changeFB = np.array([0]*self.time, dtype=float)
-        self.firmOutputReport = np.array([], dtype=(float,float))
-        self.firmCapitalReport = np.array([], dtype=(float,float))
-        self.firmWealthReport = np.array([], dtype=(float,float))
-        self.firmDebtReport = np.array([], dtype=(float,float))
-        self.firmProfitReport = np.array([], dtype=(float,float))
-        self.firmAvgPrice = np.array([], dtype=(float,float))
-        self.firmDefaultReport = np.array([], dtype=(float,float))
+        self.firmOutputReport = np.array([0]*self.time, dtype=float)
+        self.firmCapitalReport = np.array([0]*self.time, dtype=float)
+        self.firmWealthReport = np.array([0]*self.time, dtype=float)
+        self.firmDebtReport = np.array([0]*self.time, dtype=float)
+        self.firmProfitReport = np.array([0]*self.time, dtype=float)
+        self.firmAvgPrice = np.array([0]*self.time, dtype=float)
+        self.firmDefaultReport = np.array([0]*self.time, dtype=float)
 
-        self.bankWealthReport = np.array([], dtype=float)
-        self.bankProfitReport = np.array([], dtype=float)
-        self.bankDefaultReport = np.array([], dtype=float)
+        self.bankWealthReport = np.array([0]*self.time, dtype=float)
+        self.bankDebtReport = np.array([0]*self.time, dtype=float)
+        self.bankProfitReport = np.array([0]*self.time, dtype=float)
+        self.bankDefaultReport = np.array([0]*self.time, dtype=float)
 
     def findBestBank(self, potentialPartners):
         bestInterest = np.inf
@@ -248,38 +249,36 @@ class Simulation:
         self.firms.lgdf[self.firms.lgdf > 1] = 1
         self.firms.lgdf[self.firms.lgdf < 0] = 0
 
-    def reportResults(self):
-        totalCapital = (np.sum(self.firms.totalCapital), \
-                            self.firms.totalCapital[-1])
-        totalOutput = (np.sum(self.firms.output), \
-                            self.firms.output[-1])
-        self.firmOutputReport = np.append(self.firmOutputReport, totalOutput)
-        self.firmCapitalReport = np.append(self.firmCapitalReport, totalCapital)
-        self.firmWealthReport = np.append(self.firmWealthReport, \
-                (np.sum(self.firms.networth), self.firms.networth[-1]))
-        self.firmDebtReport = np.append(self.firmDebtReport, \
-                    (np.sum(self.firms.debt), self.firms.debt[-1]))
-        self.firmProfitReport = np.append(self.firmProfitReport, \
-                                    (np.sum(self.firms.profit), self.firms.profit[-1]))
-        self.firmAvgPrice = np.append(self.firmAvgPrice, \
-                (np.sum(self.firms.price), self.firms.price[-1]))
-        self.firmDefaultReport = np.append(self.firmDefaultReport, \
-                (np.count_nonzero(self.firms.default), self.firms.default[-1]))
-        self.bankWealthReport = np.append(self.bankWealthReport, np.sum(self.banks.networth))
-        self.bankProfitReport = np.append(self.bankProfitReport, np.sum(self.banks.profit))
-        self.bankDefaultReport = np.append(self.bankDefaultReport, \
-                            np.count_nonzero(self.banks.default))
+    def reportResults(self, time):
+        totalCapital = np.sum(self.firms.totalCapital)
+        totalOutput = np.sum(self.firms.output)
+        self.firmOutputReport[time] = totalOutput
+        self.firmCapitalReport[time] = totalCapital
+        self.firmAvgPrice[time] = np.sum(self.firms.price)
+        self.firmWealthReport[time] = np.sum(self.firms.networth)
+        self.firmDebtReport[time] = np.sum(self.firms.debt)
+        self.firmProfitReport[time] = np.sum(self.firms.profit)
+        self.firmDefaultReport[time] = np.count_nonzero(self.firms.default)
+
+        self.bankWealthReport[time] = np.sum(self.banks.networth)
+        self.bankDebtReport[time] = np.sum(self.banks.badDebt)
+        self.bankProfitReport[time] = np.sum(self.banks.profit)
+        self.bankDefaultReport[time] = np.count_nonzero(self.banks.default)
 
     def saveResults(self):
         print("Writing results to " + self.fileName)
         f = open(self.fileName, "w+")
         output = np.stack((self.firmOutputReport,
                                 self.firmCapitalReport,
+                                self.firmAvgPrice,
                                 self.firmWealthReport,
                                 self.firmDebtReport,
                                 self.firmProfitReport,
-                                self.firmAvgPrice,
-                                self.firmDefaultReport))
+                                self.firmDefaultReport,
+                                self.bankWealthReport,
+                                self.bankDebtReport,
+                                self.bankProfitReport,
+                                self.bankDefaultReport))
         np.savetxt(f, output.transpose(), delimiter=",")
         f.close()
 
@@ -334,7 +333,7 @@ class Simulation:
             # update banks net worth and check if defaulted
             self.updateBankNetWorth()
 
-            self.reportResults()
+            self.reportResults(t)
 
         self.saveResults()
 

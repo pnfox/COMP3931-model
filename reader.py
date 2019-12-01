@@ -3,22 +3,21 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
+resultNames = {0: "Output", 1: "Capital",
+            2 : "Price", 3 : "Wealth",
+            4 : "Debt", 5 : "Profit",
+            6 : "Default"}
+
 def plot(data, data2=None, data3=None, data4=None):
     fig, ax = plt.subplots()
     try:
         for i in [data, data2, data3, data4]:
             if i == None:
                 continue
-            if (len(i) != 2) or (type(i[0]) is not np.ndarray) \
+            if (len(i) != 2) or (type(i[0]) is not dict) \
                     or (type(i[1]) is not str):
-                raise ValueError("Error plot: data must be tuple of the form (array, str)")
-        fig1 = ax.plot(data[0], label=data[1])
-        if not data2 == None:
-            fig2 = ax.plot(data2[0], label=data2[1])
-        if not data3 == None:
-            fig3 = ax.plot(data3[0], label=data3[1])
-        if not data4 == None:
-            fig4 = ax.plot(data4[0], label=data4[1])
+                raise ValueError("Error plot: data must be tuple of the form (dict, str)")
+            ax.plot(i[0].get(i[1]), label=i[1])
         ax.legend()
         fig.show()
     except NameError:
@@ -61,28 +60,19 @@ except FileNotFoundError:
     print("No file found")
     exit()
 
-overall = []
-for i in range(7):
-    array = np.array([], dtype=float)
-    overall.append(array)
+firms = {'Output':[], 'Capital':[],
+        'Price':[], 'Wealth':[],
+        'Debt':[], 'Profit':[],
+        'Default':[]}
+banks = {'Wealth':[], 'Debt':[],
+        'Profit':[], 'Default':[]}
 
-bankWealth = np.array([], dtype=float)
-bankProfit = np.array([], dtype=float)
-bankDefault = np.array([], dtype=float)
-
-individual = []
-for i in range(7):
-    array = np.array([], dtype=float)
-    individual.append(array)
-
-index = 0
 for l in lines:
     l = np.asarray(l, dtype=float)
-    if index % 2 == 0:
-        for i in range(7):
-            overall[i] = np.append(overall[i], l[i])
-    else:
-        for i in range(7):
-            individual[i] = np.append(individual[i], l[i])
+    for i in range(7):
+        keyword = resultNames.get(i)
+        firms.get(keyword).append(float(l[i]))
+    for i in range(7, 11):
+        keyword = resultNames.get(i-4)
+        banks.get(keyword).append(float(l[i]))
 
-    index += 1
