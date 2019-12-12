@@ -35,31 +35,43 @@ def checkChange(data, data2):
 
 def openFiles(folder):
 
-    try:
-        with open(folder + "aggregateResults.csv", "r") as f:
-            reader = csv.reader(f)
-            lines = list(reader)
-    except FileNotFoundError:
-        print("No file found")
-        exit()
-
     firms = {'Output':[], 'Capital':[],
+            'Price':[], 'Wealth':[],
+            'Debt':[], 'Profit':[],
+            'Default':[]}
+    individualFirm = {'Output':[], 'Capital':[],
             'Price':[], 'Wealth':[],
             'Debt':[], 'Profit':[],
             'Default':[]}
     banks = {'Wealth':[], 'Debt':[],
             'Profit':[], 'Default':[]}
 
-    for l in lines:
-        l = np.asarray(l, dtype=float)
-        for i in range(7):
-            keyword = resultNames.get(i)
-            firms.get(keyword).append(float(l[i]))
-        for i in range(7, 11):
-            keyword = resultNames.get(i-4)
-            banks.get(keyword).append(float(l[i]))
+    try:
 
-    return firms, banks
+        with open(folder + "aggregateResults.csv", "r") as f:
+            reader = csv.reader(f)
+            lines = list(reader)
+        for l in lines:
+            l = np.asarray(l, dtype=float)
+            for i in range(7):
+                keyword = resultNames.get(i)
+                firms.get(keyword).append(float(l[i]))
+            for i in range(7, 11):
+                keyword = resultNames.get(i-4)
+                banks.get(keyword).append(float(l[i]))
+        with open(folder + "individualFirmResults.csv", "r") as f:
+            reader = csv.reader(f)
+            lines = list(reader)
+        for l in lines:
+            l = np.asarray(l, dtype=float)
+            for i in range(7):
+                keyword = resultNames.get(i)
+                individualFirm.get(keyword).append(float(l[i]))
+    except FileNotFoundError:
+        print("No file found")
+        exit()
+
+    return firms, banks, individualFirm
 
 folders = glob.glob("results/*/")
 choice = 0
@@ -82,4 +94,4 @@ if len(folders) > 1:
         exit()
 
 print("Opening results from " + folders[choice])
-firms, banks = openFiles(folders[choice])
+firms, banks, individualFirm = openFiles(folders[choice])

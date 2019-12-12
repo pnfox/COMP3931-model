@@ -68,6 +68,7 @@ class Simulation:
         self.firmAvgPrice = np.array([0]*self.time, dtype=float)
         self.firmDefaultReport = np.array([0]*self.time, dtype=float)
 
+        # array to store price, wealth, capital,... from a single firm
         self.individualFirm = np.array([[0,0,0,0,0,0,0]], dtype=float)
 
         self.bankWealthReport = np.array([0]*self.time, dtype=float)
@@ -270,6 +271,7 @@ class Simulation:
             firmsResults.append(i[-1])
         self.individualFirm = np.concatenate((self.individualFirm, np.array([firmsResults])))
 
+        # Gather aggregate bank results
         self.bankWealthReport[time] = np.sum(self.banks.networth)
         self.bankDebtReport[time] = np.sum(self.banks.badDebt)
         self.bankProfitReport[time] = np.sum(self.banks.profit)
@@ -304,6 +306,7 @@ class Simulation:
 
         # Write results for special firm
         f = open(self.resultFolder + "individualFirmResults.csv", "w+")
+        self.individualFirm = self.individualFirm[1:] # remove first row which is just zeros
         np.savetxt(f, self.individualFirm, delimiter=",")
         f.close()
 
