@@ -257,7 +257,7 @@ class Simulation:
         totalOutput = np.sum(self.firms.output)
         self.firmOutputReport[time] = totalOutput
         self.firmCapitalReport[time] = totalCapital
-        self.firmAvgPrice[time] = np.sum(self.firms.price)
+        self.firmAvgPrice[time] = np.mean(self.firms.price)
         self.firmWealthReport[time] = np.sum(self.firms.networth)
         self.firmDebtReport[time] = np.sum(self.firms.debt)
         self.firmProfitReport[time] = np.sum(self.firms.profit)
