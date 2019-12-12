@@ -3,18 +3,88 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
-files = glob.glob("results/*.csv")
+resultNames = {0: "Output", 1: "Capital",
+            2 : "Price", 3 : "Wealth",
+            4 : "Debt", 5 : "Profit",
+            6 : "Default"}
+
+def plot(data, data2=None, data3=None, data4=None):
+    fig, ax = plt.subplots()
+    try:
+        for i in [data, data2, data3, data4]:
+            if i == None:
+                continue
+            if (len(i) != 2) or (type(i[0]) is not dict) \
+                    or (type(i[1]) is not str):
+                raise ValueError("Error plot: data must be tuple of the form (dict, str)")
+            ax.plot(i[0].get(i[1]), label=i[1])
+        ax.legend()
+        fig.show()
+    except NameError:
+        print("Error plot: data must be passed to function")
+        return
+
+def checkChange(data, data2):
+    for i in range(1, len(data)):
+        changeInData1 = data[i] - data[i-1]
+        changeInData2 = data2[i] - data2[i-1]
+        if changeInData1 * changeInData2 < 0:
+            print("Change not off the same sign at " + str(i))
+            print("Change in data1: " + str(changeInData1))
+            print("Change in data2: " + str(changeInData2))
+
+def openFiles(folder):
+
+    firms = {'Output':[], 'Capital':[],
+            'Price':[], 'Wealth':[],
+            'Debt':[], 'Profit':[],
+            'Default':[]}
+    individualFirm = {'Output':[], 'Capital':[],
+            'Price':[], 'Wealth':[],
+            'Debt':[], 'Profit':[],
+            'Default':[]}
+    banks = {'Wealth':[], 'Debt':[],
+            'Profit':[], 'Default':[]}
+
+    try:
+
+        with open(folder + "aggregateResults.csv", "r") as f:
+            reader = csv.reader(f)
+            lines = list(reader)
+        for l in lines:
+            l = np.asarray(l, dtype=float)
+            for i in range(7):
+                keyword = resultNames.get(i)
+                firms.get(keyword).append(float(l[i]))
+            for i in range(7, 11):
+                keyword = resultNames.get(i-4)
+                banks.get(keyword).append(float(l[i]))
+        with open(folder + "individualFirmResults.csv", "r") as f:
+            reader = csv.reader(f)
+            lines = list(reader)
+        for l in lines:
+            l = np.asarray(l, dtype=float)
+            for i in range(7):
+                keyword = resultNames.get(i)
+                individualFirm.get(keyword).append(float(l[i]))
+    except FileNotFoundError:
+        print("No file found")
+        exit()
+
+    return firms, banks, individualFirm
+
+folders = glob.glob("results/*/")
 choice = 0
-if len(files) == 0:
+if len(folders) == 0:
     print("No result files to read")
     print("Please run simulator first")
     exit()
-if len(files) == 1:
+if len(folders) == 1:
     choice = 0
-if len(files) > 1:
+if len(folders) > 1:
     print("Please choose a simulation run to analyse")
     index = 0
-    for i in files:
+    for i in folders:
         print("[" + str(index) + "]: " + i)
         index += 1
     try:
@@ -22,32 +92,6 @@ if len(files) > 1:
     except ValueError:
         print("Invalid Input")
         exit()
-try:
-    with open(files[choice], "r") as f:
-        reader = csv.reader(f)
-        lines = list(reader)
-except FileNotFoundError:
-    print("No file found")
-    exit()
 
-firmOutput = np.array([], dtype=float)
-firmCapital = np.array([], dtype=float)
-firmWealth = np.array([], dtype=float)
-firmDebt = np.array([], dtype=float)
-firmProfit = np.array([], dtype=float)
-firmDefault = np.array([], dtype=float)
-bankWealth = np.array([], dtype=float)
-bankProfit = np.array([], dtype=float)
-bankDefault = np.array([], dtype=float)
-for l in lines:
-    l = np.asarray(l, dtype=float)
-    firmOutput = np.append(firmOutput, l[0])
-    firmCapital = np.append(firmCapital, l[1])
-    firmWealth = np.append(firmWealth, l[2])
-    firmDebt = np.append(firmDebt, l[3])
-    firmProfit = np.append(firmProfit, l[4])
-    firmDefault = np.append(firmDefault, l[5])
-    bankWealth = np.append(bankWealth, l[6])
-    bankProfit = np.append(bankProfit, l[7])
-    bankDefault = np.append(bankDefault, l[8])
-
+print("Opening results from " + folders[choice])
+firms, banks, individualFirm = openFiles(folders[choice])
