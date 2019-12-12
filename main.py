@@ -3,7 +3,7 @@ import simulation
 
 
 if __name__=="__main__":
-    
+
     simulationTime = 1000
     numberOfFirms = 500
     numberOfBanks = 50

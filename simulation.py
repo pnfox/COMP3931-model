@@ -1,5 +1,5 @@
 import numpy as np
-import math
+import os
 import agents
 
 class Simulation:
@@ -56,7 +56,7 @@ class Simulation:
         # contains banks that firms use as lookup for interestRates
         self.bankPools = np.zeros((self.numberOfFirms, self.chi))
 
-        self.fileName = "results/" + str(self.seed) + ".csv"
+        self.resultFolder = "results/" + str(self.seed) + "/"
 
         # Output variables
         self.changeFB = np.array([0]*self.time, dtype=float)
@@ -68,7 +68,11 @@ class Simulation:
         self.firmAvgPrice = np.array([0]*self.time, dtype=float)
         self.firmDefaultReport = np.array([0]*self.time, dtype=float)
 
+        # array to store price, wealth, capital,... from a single firm
+        self.individualFirm = np.array([[0,0,0,0,0,0,0]], dtype=float)
+
         self.bankWealthReport = np.array([0]*self.time, dtype=float)
+        self.bankDebtReport = np.array([0]*self.time, dtype=float)
         self.bankProfitReport = np.array([0]*self.time, dtype=float)
         self.bankDefaultReport = np.array([0]*self.time, dtype=float)
 
@@ -194,7 +198,7 @@ class Simulation:
         self.firms.output = self.phi * np.float_power(self.firms.totalCapital, self.beta)
 
     def updateFirmPrice(self):
-        self.firms.price = np.random.normal(self.alpha, np.sqrt(self.varpf), size=self.numberOfFirms)
+        self.firms.price = np.random.normal(self.alpha, self.varpf**2, size=self.numberOfFirms)
 
     def updateFirmInterestRate(self):
         for f in range(self.numberOfFirms):
@@ -253,29 +257,57 @@ class Simulation:
         totalOutput = np.sum(self.firms.output)
         self.firmOutputReport[time] = totalOutput
         self.firmCapitalReport[time] = totalCapital
+        self.firmAvgPrice[time] = np.sum(self.firms.price)
         self.firmWealthReport[time] = np.sum(self.firms.networth)
         self.firmDebtReport[time] = np.sum(self.firms.debt)
         self.firmProfitReport[time] = np.sum(self.firms.profit)
-        self.firmAvgPrice[time] = np.sum(self.firms.price)
         self.firmDefaultReport[time] = np.count_nonzero(self.firms.default)
+
+        # Gather the results of the last agent
+        firmsResults = []
+        for i in [self.firms.totalCapital, self.firms.output, self.firms.price,
+                    self.firms.networth, self.firms.debt, self.firms.profit,
+                    self.firms.default]:
+            firmsResults.append(i[-1])
+        self.individualFirm = np.concatenate((self.individualFirm, np.array([firmsResults])))
+
+        # Gather aggregate bank results
         self.bankWealthReport[time] = np.sum(self.banks.networth)
+        self.bankDebtReport[time] = np.sum(self.banks.badDebt)
         self.bankProfitReport[time] = np.sum(self.banks.profit)
         self.bankDefaultReport[time] = np.count_nonzero(self.banks.default)
 
     def saveResults(self):
-        print("Writing results to " + self.fileName)
-        f = open(self.fileName, "w+")
+
+        try:
+            os.mkdir(self.resultFolder)
+        except FileExistsError:
+            print("Simulation with this seed exists")
+            override = input("Overwrite results? [Y/n]: ")
+            if "N" in override.upper() or ("N" in override.upper() and "Y" in override.upper()):
+                exit()
+
+        print("Writing simulation results with seed " + str(self.seed))
+
+        f = open(self.resultFolder + "aggregateResults.csv", "w+")
         output = np.stack((self.firmOutputReport,
                                 self.firmCapitalReport,
+                                self.firmAvgPrice,
                                 self.firmWealthReport,
                                 self.firmDebtReport,
                                 self.firmProfitReport,
-                                self.firmAvgPrice,
                                 self.firmDefaultReport,
                                 self.bankWealthReport,
+                                self.bankDebtReport,
                                 self.bankProfitReport,
                                 self.bankDefaultReport))
         np.savetxt(f, output.transpose(), delimiter=",")
+        f.close()
+
+        # Write results for special firm
+        f = open(self.resultFolder + "individualFirmResults.csv", "w+")
+        self.individualFirm = self.individualFirm[1:] # remove first row which is just zeros
+        np.savetxt(f, self.individualFirm, delimiter=",")
         f.close()
 
     def run(self):
