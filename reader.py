@@ -33,18 +33,46 @@ def checkChange(data, data2):
             print("Change in data1: " + str(changeInData1))
             print("Change in data2: " + str(changeInData2))
 
-files = glob.glob("results/*.csv")
+def openFiles(folder):
+
+    try:
+        with open(folder + "aggregateResults.csv", "r") as f:
+            reader = csv.reader(f)
+            lines = list(reader)
+    except FileNotFoundError:
+        print("No file found")
+        exit()
+
+    firms = {'Output':[], 'Capital':[],
+            'Price':[], 'Wealth':[],
+            'Debt':[], 'Profit':[],
+            'Default':[]}
+    banks = {'Wealth':[], 'Debt':[],
+            'Profit':[], 'Default':[]}
+
+    for l in lines:
+        l = np.asarray(l, dtype=float)
+        for i in range(7):
+            keyword = resultNames.get(i)
+            firms.get(keyword).append(float(l[i]))
+        for i in range(7, 11):
+            keyword = resultNames.get(i-4)
+            banks.get(keyword).append(float(l[i]))
+
+    return firms, banks
+
+folders = glob.glob("results/*/")
 choice = 0
-if len(files) == 0:
+if len(folders) == 0:
     print("No result files to read")
     print("Please run simulator first")
     exit()
-if len(files) == 1:
+if len(folders) == 1:
     choice = 0
-if len(files) > 1:
+if len(folders) > 1:
     print("Please choose a simulation run to analyse")
     index = 0
-    for i in files:
+    for i in folders:
         print("[" + str(index) + "]: " + i)
         index += 1
     try:
@@ -52,27 +80,6 @@ if len(files) > 1:
     except ValueError:
         print("Invalid Input")
         exit()
-try:
-    with open(files[choice], "r") as f:
-        reader = csv.reader(f)
-        lines = list(reader)
-except FileNotFoundError:
-    print("No file found")
-    exit()
 
-firms = {'Output':[], 'Capital':[],
-        'Price':[], 'Wealth':[],
-        'Debt':[], 'Profit':[],
-        'Default':[]}
-banks = {'Wealth':[], 'Debt':[],
-        'Profit':[], 'Default':[]}
-
-for l in lines:
-    l = np.asarray(l, dtype=float)
-    for i in range(7):
-        keyword = resultNames.get(i)
-        firms.get(keyword).append(float(l[i]))
-    for i in range(7, 11):
-        keyword = resultNames.get(i-4)
-        banks.get(keyword).append(float(l[i]))
-
+print("Opening results from " + folders[choice])
+firms, banks = openFiles(folders[choice])
