@@ -17,8 +17,8 @@ def plot(data, data2=None, data3=None, data4=None):
             if (len(i) != 2) or (type(i[0]) is not dict) \
                     or (type(i[1]) is not str):
                 raise ValueError("Error plot: data must be tuple of the form (dict, str)")
-            ax.plot(i[0].get(i[1]), label=i[1])
-        ax.legend()
+            ax.plot(i[0].get(i[1]))
+        ax.set_title("Firm Capital")
         fig.show()
     except NameError:
         print("Error plot: data must be passed to function")
@@ -33,7 +33,7 @@ def checkChange(data, data2):
             print("Change in data1: " + str(changeInData1))
             print("Change in data2: " + str(changeInData2))
 
-def openFiles(folder):
+def openSimulationFile(folder):
 
     firms = {'Output':[], 'Capital':[],
             'Price':[], 'Wealth':[],
@@ -45,6 +45,8 @@ def openFiles(folder):
             'Default':[]}
     banks = {'Wealth':[], 'Debt':[],
             'Profit':[], 'Default':[]}
+
+    economy = {"GDP": [], "Avg interest":[]}
 
     try:
 
@@ -59,6 +61,8 @@ def openFiles(folder):
             for i in range(7, 11):
                 keyword = resultNames.get(i-4)
                 banks.get(keyword).append(float(l[i]))
+            economy.get("GDP").append(float(l[11]))
+            economy.get("Avg interest").append(float(l[12]))
         with open(folder + "individualFirmResults.csv", "r") as f:
             reader = csv.reader(f)
             lines = list(reader)
@@ -94,4 +98,6 @@ if len(folders) > 1:
         exit()
 
 print("Opening results from " + folders[choice])
-firms, banks, individualFirm = openFiles(folders[choice])
+firms, banks, individualFirm = openSimulationFile(folders[choice])
+
+plot((firms, "Capital"))

@@ -76,6 +76,9 @@ class Simulation:
         self.bankProfitReport = np.array([0]*self.time, dtype=float)
         self.bankDefaultReport = np.array([0]*self.time, dtype=float)
 
+        self.GDP = np.array([0]*self.time, dtype=float)
+        self.avgInterest = np.array([0]*self.time, dtype=float)
+
     def findBestBank(self, potentialPartners):
         bestInterest = np.inf
         best = np.nan
@@ -277,6 +280,9 @@ class Simulation:
         self.bankProfitReport[time] = np.sum(self.banks.profit)
         self.bankDefaultReport[time] = np.count_nonzero(self.banks.default)
 
+        self.GDP[time] = totalOutput
+        self.avgInterest[time] = np.mean(self.banks.interestRate)
+
     def saveResults(self):
 
         try:
@@ -300,7 +306,9 @@ class Simulation:
                                 self.bankWealthReport,
                                 self.bankDebtReport,
                                 self.bankProfitReport,
-                                self.bankDefaultReport))
+                                self.bankDefaultReport,
+                                self.GDP,
+                                self.avgInterest))
         np.savetxt(f, output.transpose(), delimiter=",")
         f.close()
 
