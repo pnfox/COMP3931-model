@@ -1,13 +1,16 @@
 import csv
 
-def getGDPValidationData():
-    data = open("/home/pnfox/Downloads/tmp/namq_10_gdp_1_Data.csv")
-    reader = csv.reader(data)
-    lines = list(reader)
+def getGDPValidationData(fileName):
+    try:
+        data = open(fileName)
+        reader = csv.reader(data)
+        lines = list(reader)
+    except IOError:
+        raise Exception("Please give a valid validation csv file")
 
-    ukGDP = []
+    ukGDP = []; spainGDP = []; franceGDP = []
     for l in lines:
-        if ("United Kingdom" in l[1]) and ("Current" in l[2]) \
+        if ("Current" in l[2]) \
                 and ("euro" in l[2]) and ("Unadjusted" in l[3]):
             if l[-2] == ":" or l[-2] == "":
                 continue
@@ -15,6 +18,11 @@ def getGDPValidationData():
             gdp = ""
             for i in numbers:
                 gdp += i
-            ukGDP.append(float(gdp))
+            if "United Kingdom" in l[1]:
+                ukGDP.append(float(gdp))
+            elif "France" in l[1]:
+                franceGDP.append(float(gdp))
+            elif "Spain" in l[1]:
+                spainGDP.append(float(gdp))
 
-    return ukGDP
+    return ukGDP, franceGDP, spainGDP
