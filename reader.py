@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 resultNames = {0: "Output", 1: "Capital",
             2 : "Price", 3 : "Wealth",
             4 : "Debt", 5 : "Profit",
-            6 : "Default"}
+            6 : "Default", 7: "Interest"}
 
 def plot(data, data2=None, data3=None, data4=None):
     fig, ax = plt.subplots()
@@ -42,7 +42,7 @@ def openSimulationFile(folder):
     individualFirm = {'Output':[], 'Capital':[],
             'Price':[], 'Wealth':[],
             'Debt':[], 'Profit':[],
-            'Default':[]}
+            'Default':[],'Interest':[]}
     banks = {'Wealth':[], 'Debt':[],
             'Profit':[], 'Default':[]}
 
@@ -68,7 +68,7 @@ def openSimulationFile(folder):
             lines = list(reader)
         for l in lines:
             l = np.asarray(l, dtype=float)
-            for i in range(7):
+            for i in range(8):
                 keyword = resultNames.get(i)
                 individualFirm.get(keyword).append(float(l[i]))
     except FileNotFoundError:

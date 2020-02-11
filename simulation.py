@@ -69,7 +69,7 @@ class Simulation:
         self.firmDefaultReport = np.array([0]*self.time, dtype=float)
 
         # array to store price, wealth, capital,... from a single firm
-        self.individualFirm = np.array([[0,0,0,0,0,0,0]], dtype=float)
+        self.individualFirm = np.array([[0,0,0,0,0,0,0,0]], dtype=float)
 
         self.bankWealthReport = np.array([0]*self.time, dtype=float)
         self.bankDebtReport = np.array([0]*self.time, dtype=float)
@@ -270,8 +270,8 @@ class Simulation:
         firmsResults = []
         for i in [self.firms.totalCapital, self.firms.output, self.firms.price,
                     self.firms.networth, self.firms.debt, self.firms.profit,
-                    self.firms.default]:
-            firmsResults.append(i[-1])
+                    self.firms.default, self.firms.interestRate]:
+                firmsResults.append(i[-1])
         self.individualFirm = np.concatenate((self.individualFirm, np.array([firmsResults])))
 
         # Gather aggregate bank results
@@ -325,8 +325,8 @@ class Simulation:
             try:
                 self.replaceDefaults()
             except Exception as e:
+                print("Problem with replacing defaulted firms")
                 print(e)
-                exit()
 
             # update banks interest rates
             self.updateInterestRates()
