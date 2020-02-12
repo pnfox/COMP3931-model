@@ -112,27 +112,42 @@ def openSimulationFile(folder):
 
     return firms, banks, individualFirm
 
+def selectResults(files):
+    choice = 0
+    if len(files) == 0:
+        print("No result files to read")
+        print("Please run simulator first")
+        exit()
+    if len(files) == 1:
+        choice = 0
+    if len(files) > 1:
+        print("Choose a simulation run to analyse")
+        index = 0
+        for i in files:
+            print("[" + str(index) + "]: " + i)
+            index += 1
+        try:
+            choice = int(input(">>> "))
+            if choice >= len(files) or choice < 0:
+                print("Please give valid choice")
+                return -1
+        except ValueError:
+            print("Invalid Input")
+            return -1
+        except EOFError:
+            return None
+    return choice
+
 folders = glob.glob("results/*/")
 choice = 0
-if len(folders) == 0:
-    print("No result files to read")
-    print("Please run simulator first")
+while(True):
+    choice = selectResults(folders)
+    if choice != -1 or choice == None:
+        break
+    print("Choice: ", choice)
+
+if choice == None:
     exit()
-if len(folders) == 1:
-    choice = 0
-if len(folders) > 1:
-    print("Please choose a simulation run to analyse")
-    index = 0
-    for i in folders:
-        print("[" + str(index) + "]: " + i)
-        index += 1
-    try:
-        choice = int(input(">>> "))
-        if choice >= len(folders):
-            print("Please give valid choice")
-    except ValueError:
-        print("Invalid Input")
-        exit()
 
 print("Opening results from " + folders[choice])
 firms, banks, individualFirm = openSimulationFile(folders[choice])
