@@ -1,24 +1,26 @@
+import sys
 import glob
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
+import agents
 
 resultNames = {0: "Output", 1: "Capital",
             2 : "Price", 3 : "Wealth",
             4 : "Debt", 5 : "Profit",
-            6 : "Default"}
+            6 : "Default", 7: "Interest"}
 
-def plot(data, data2=None, data3=None, data4=None):
+def plot(data, data2=None, data3=None, data4=None, title=""):
     fig, ax = plt.subplots()
     try:
         for i in [data, data2, data3, data4]:
-            if i == None:
+            if i is None:
                 continue
-            if (len(i) != 2) or (type(i[0]) is not dict) \
-                    or (type(i[1]) is not str):
-                raise ValueError("Error plot: data must be tuple of the form (dict, str)")
-            ax.plot(i[0].get(i[1]))
-        ax.set_title("Firm Capital")
+            if (type(i) is not list) and (type(i) is not np.ndarray):
+                raise ValueError("Error plot: data must be list")
+            ax.plot(i)
+        if title != "":
+            ax.set_title(title)
         fig.show()
     except NameError:
         print("Error plot: data must be passed to function")
@@ -33,71 +35,153 @@ def checkChange(data, data2):
             print("Change in data1: " + str(changeInData1))
             print("Change in data2: " + str(changeInData2))
 
+def getObject(A, time):
+    if not type(A) == dict:
+        print("Error printObject: expected type(A) as dict")
+        return
+    if not type(time) == int:
+        print("Error printObject: expected type(time) as int")
+        return
+
+    print("Printing object at time ", time)
+    index = 0
+    for k in A.keys():
+        print(k + ": " + str(A.get(k)[time]))
+        index += 1
+
+def getObjectValue(A, time, value):
+    if not type(A) == dict:
+        print("Error printObject: expected type(A) as dict")
+        return
+    if not type(time) == int:
+        print("Error printObject: expected type(time) as int")
+        return
+
+    print(A.get(value)[time])
+
 def openSimulationFile(folder):
 
-    firms = {'Output':[], 'Capital':[],
-            'Price':[], 'Wealth':[],
-            'Debt':[], 'Profit':[],
-            'Default':[]}
-    individualFirm = {'Output':[], 'Capital':[],
-            'Price':[], 'Wealth':[],
-            'Debt':[], 'Profit':[],
-            'Default':[]}
-    banks = {'Wealth':[], 'Debt':[],
-            'Profit':[], 'Default':[]}
+    firmsKeys = ['Output', 'Capital',
+            'Price', 'Wealth',
+            'Debt', 'Profit',
+            'Default']
+    individualFirmKeys = ['Output', 'Capital',
+            'Price', 'Wealth',
+            'Debt', 'Profit',
+            'Default','Interest']
+    banksKeys = ['Wealth', 'Debt',
+            'Profit', 'Default']
 
     economy = {"GDP": [], "Avg interest":[]}
 
-    try:
+    firms = agents.Firms()
+    banks = agents.Banks()
+    individualFirm = agents.IndividualFirm()
 
+    try:
         with open(folder + "aggregateResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = list(reader)
-        for l in lines:
-            l = np.asarray(l, dtype=float)
-            for i in range(7):
-                keyword = resultNames.get(i)
-                firms.get(keyword).append(float(l[i]))
-            for i in range(7, 11):
-                keyword = resultNames.get(i-4)
-                banks.get(keyword).append(float(l[i]))
-            economy.get("GDP").append(float(l[11]))
-            economy.get("Avg interest").append(float(l[12]))
+            lines = np.array(list(reader), dtype=float)
+            firms.output = lines.transpose()[0]
+            firms.capital = lines.transpose()[1]
+            firms.price = lines.transpose()[2]
+            firms.networth = lines.transpose()[3]
+            firms.debt = lines.transpose()[4]
+            firms.profit = lines.transpose()[5]
+            firms.default = lines.transpose()[6]
+
+            banks.networth = lines.transpose()[7]
+            banks.badDebt = lines.transpose()[8]
+            banks.profit = lines.transpose()[9]
+            banks.default = lines.transpose()[10]
+            economy.get("GDP").append(lines.transpose()[11])
+            economy.get("Avg interest").append(lines.transpose()[12])
         with open(folder + "individualFirmResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = list(reader)
-        for l in lines:
-            l = np.asarray(l, dtype=float)
-            for i in range(7):
-                keyword = resultNames.get(i)
-                individualFirm.get(keyword).append(float(l[i]))
+            lines = np.array(list(reader), dtype=float)
+            individualFirm.output = lines.transpose()[0]
+            individualFirm.capital = lines.transpose()[1]
+            individualFirm.price = lines.transpose()[2]
+            individualFirm.networth = lines.transpose()[3]
+            individualFirm.debt = lines.transpose()[4]
+            individualFirm.profit = lines.transpose()[5]
+            individualFirm.default = lines.transpose()[6]
+            individualFirm.interest = lines.transpose()[7]
     except FileNotFoundError:
         print("No file found")
         exit()
 
     return firms, banks, individualFirm
 
-folders = glob.glob("results/*/")
-choice = 0
-if len(folders) == 0:
-    print("No result files to read")
-    print("Please run simulator first")
-    exit()
-if len(folders) == 1:
+def selectResults(files):
     choice = 0
-if len(folders) > 1:
-    print("Please choose a simulation run to analyse")
-    index = 0
-    for i in folders:
-        print("[" + str(index) + "]: " + i)
-        index += 1
-    try:
-        choice = int(input())
-    except ValueError:
-        print("Invalid Input")
+    if len(files) == 0:
+        print("No result files to read")
+        print("Please run simulator first")
         exit()
+    if len(files) == 1:
+        choice = 0
+    if len(files) > 1:
+        print("Choose a simulation run to analyse")
+        index = 0
+        for i in files:
+            print("[" + str(index) + "]: " + i)
+            index += 1
+        try:
+            choice = int(input(">>> "))
+            if choice >= len(files) or choice < 0:
+                print("Please give valid choice")
+                return -1
+        except ValueError:
+            print("Invalid Input")
+            return -1
+    return choice
 
-print("Opening results from " + folders[choice])
-firms, banks, individualFirm = openSimulationFile(folders[choice])
+def executeCommand(cmd):
+    cmd = cmd.lower()
+    cmd = cmd.split(" ")
 
-plot((firms, "Capital"))
+    availableCommands = ["plot"]
+
+    args = ""
+    if cmd[0] in availableCommands:
+        for i in cmd[1:]:
+            if (not i.startswith("firms")) and (not i.startswith("banks")) \
+                    and (not i.startswith("individual")):
+                print("Discarding invalid argument: ", i)
+                continue
+            else:
+                args += i+","
+        # if we get here cmd is valid
+        exec(cmd[0] + "(" + args + ")")
+
+if __name__=="__main__":
+    folders = glob.glob("results/*/")
+    choice = 0
+    while(True):
+        try:
+            choice = selectResults(folders)
+            if choice != -1:
+                break
+        except EOFError:
+            sys.exit()
+
+    print("Opening results from " + folders[choice])
+    firms, banks, individualFirm = openSimulationFile(folders[choice])
+
+    while(True):
+        try:
+            shellCommand = str(input(">>> ")).lower()
+            if ("exit" in shellCommand) or ("quit" in shellCommand):
+                sys.exit()
+            else:
+                executeCommand(shellCommand)
+        except EOFError:
+            sys.exit()
+        except AttributeError as e:
+            print(e)
+
+    sys.exit()
+
+
+
