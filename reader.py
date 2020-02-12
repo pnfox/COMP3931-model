@@ -127,7 +127,9 @@ if len(folders) > 1:
         print("[" + str(index) + "]: " + i)
         index += 1
     try:
-        choice = int(input())
+        choice = int(input(">>> "))
+        if choice >= len(folders):
+            print("Please give valid choice")
     except ValueError:
         print("Invalid Input")
         exit()
