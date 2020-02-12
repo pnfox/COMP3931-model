@@ -137,6 +137,24 @@ def selectResults(files):
             return -1
     return choice
 
+def executeCommand(cmd):
+    cmd = cmd.lower()
+    cmd = cmd.split(" ")
+
+    availableCommands = ["plot"]
+
+    args = ""
+    if cmd[0] in availableCommands:
+        for i in cmd[1:]:
+            if (not i.startswith("firms")) and (not i.startswith("banks")) \
+                    and (not i.startswith("individual")):
+                print("Discarding invalid argument: ", i)
+                continue
+            else:
+                args += i+","
+        # if we get here cmd is valid
+        exec(cmd[0] + "(" + args + ")")
+
 if __name__=="__main__":
     folders = glob.glob("results/*/")
     choice = 0
@@ -151,7 +169,19 @@ if __name__=="__main__":
     print("Opening results from " + folders[choice])
     firms, banks, individualFirm = openSimulationFile(folders[choice])
 
-    print("Where individualFirm went bankrupt")
-    print(np.where(individualFirm.default == 1)[0])
-    plot(firms.output)
-    plot(individualFirm.output)
+    while(True):
+        try:
+            shellCommand = str(input(">>> ")).lower()
+            if ("exit" in shellCommand) or ("quit" in shellCommand):
+                sys.exit()
+            else:
+                executeCommand(shellCommand)
+        except EOFError:
+            sys.exit()
+        except AttributeError as e:
+            print(e)
+
+    sys.exit()
+
+
+
