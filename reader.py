@@ -1,3 +1,4 @@
+import sys
 import glob
 import csv
 import numpy as np
@@ -134,25 +135,23 @@ def selectResults(files):
         except ValueError:
             print("Invalid Input")
             return -1
-        except EOFError:
-            return None
     return choice
 
-folders = glob.glob("results/*/")
-choice = 0
-while(True):
-    choice = selectResults(folders)
-    if choice != -1 or choice == None:
-        break
-    print("Choice: ", choice)
+if __name__=="__main__":
+    folders = glob.glob("results/*/")
+    choice = 0
+    while(True):
+        try:
+            choice = selectResults(folders)
+            if choice != -1:
+                break
+        except EOFError:
+            sys.exit()
 
-if choice == None:
-    exit()
+    print("Opening results from " + folders[choice])
+    firms, banks, individualFirm = openSimulationFile(folders[choice])
 
-print("Opening results from " + folders[choice])
-firms, banks, individualFirm = openSimulationFile(folders[choice])
-
-print("Where individualFirm went bankrupt")
-print(np.where(individualFirm.default == 1)[0])
-plot(firms.output)
-plot(individualFirm.output)
+    print("Where individualFirm went bankrupt")
+    print(np.where(individualFirm.default == 1)[0])
+    plot(firms.output)
+    plot(individualFirm.output)
