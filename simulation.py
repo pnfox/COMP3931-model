@@ -185,8 +185,8 @@ class Simulation:
             raise Exception("Firm negative networth", np.where(self.firms.networth <= 0))
         if np.any(self.banks.networth <= 0):
             raise Exception("Banks negative networth at ", np.where(self.banks.networth <= 0))
-        if np.any(self.firms.totalCapital < 0):
-            raise Exception("Firms with negative total capital", len(np.where(self.firms.totalCapital <= 0)[0]))
+        if np.any(self.firms.capital < 0):
+            raise Exception("Firms with negative total capital", len(np.where(self.firms.capital <= 0)[0]))
 
     def updateInterestRates(self):
         self.banks.interestRate = self.gamma * np.float_power(self.banks.networth, -self.gamma)
@@ -195,10 +195,10 @@ class Simulation:
         self.firms.debt = self.firms.leverage * self.firms.networth
 
     def updateFirmCapital(self):
-        self.firms.totalCapital = self.firms.networth + self.firms.debt
+        self.firms.capital = self.firms.networth + self.firms.debt
 
     def updateFirmOutput(self):
-        self.firms.output = self.phi * np.float_power(self.firms.totalCapital, self.beta)
+        self.firms.output = self.phi * np.float_power(self.firms.capital, self.beta)
 
     def updateFirmPrice(self):
         self.firms.price = np.random.normal(self.alpha, self.varpf**2, size=self.numberOfFirms)
@@ -256,7 +256,7 @@ class Simulation:
         self.firms.lgdf[self.firms.lgdf < 0] = 0
 
     def reportResults(self, time):
-        totalCapital = np.sum(self.firms.totalCapital)
+        totalCapital = np.sum(self.firms.capital)
         totalOutput = np.sum(self.firms.output)
         self.firmOutputReport[time] = totalOutput
         self.firmCapitalReport[time] = totalCapital
@@ -268,7 +268,7 @@ class Simulation:
 
         # Gather the results of the last agent
         firmsResults = []
-        for i in [self.firms.totalCapital, self.firms.output, self.firms.price,
+        for i in [self.firms.output, self.firms.capital, self.firms.price,
                     self.firms.networth, self.firms.debt, self.firms.profit,
                     self.firms.default, self.firms.interestRate]:
                 firmsResults.append(i[-1])
