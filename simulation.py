@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import agents
+import sys
 
 class Simulation:
 
@@ -18,6 +19,7 @@ class Simulation:
             beta, # production function parameter
             rCB, # central bank interest rate
             cB, # banks costs
+            mode=None, # mode to run simulation
             seed=None,
             ):
         self.time = time
@@ -34,6 +36,9 @@ class Simulation:
         self.rCB = rCB
         self.cB = cB
         self.bestFirm = 0
+
+        self.mode = mode
+        self.continueUntilTime = 0
 
         if seed == None:
             self.seed = np.random.randint(9000)
@@ -318,9 +323,41 @@ class Simulation:
         np.savetxt(f, self.individualFirm, delimiter=",")
         f.close()
 
+    def interactiveShell(self):
+        while(True):
+            try:
+                shellCommand = str(input(">>> "))
+                originalCommand = shellCommand
+                shellCommand = shellCommand.lower().split(" ")
+                cmd = shellCommand[0]
+                args = shellCommand[1:]
+                if ("exit" == cmd) or ("quit" == cmd):
+                    print("Do you wish to save results?")
+                    answer = input("[Y/N] ").lower()
+                    if ("y" == answer) or ("yes" == answer):
+                        self.saveResults()
+                    sys.exit()
+                elif ("continue" == cmd) or ("c" == cmd):
+                    try:
+                        self.continueUntilTime = int(shellCommand[1])
+                        if self.continueUntilTime < self.currentStep:
+                            raise ValueError
+                    except (ValueError, IndexError):
+                        print("Invalid use of command: Continue")
+                        print("\tUsage: continue [time to continue to]")
+                        continue
+                    break
+                else:
+                    exec(originalCommand)
+            except EOFError:
+                sys.exit()
+            except AttributeError as e:
+                print(e)
+
     def run(self):
         print("Running Simulation...")
         for t in range(self.time):
+            self.currentStep = t
             # replace defaulted firms and banks
             try:
                 self.replaceDefaults()
@@ -370,6 +407,11 @@ class Simulation:
             self.updateBankNetWorth()
 
             self.reportResults(t)
+
+            if (self.mode == "Interactive") and \
+                    (self.continueUntilTime == self.currentStep):
+                print("Time: ", t)
+                self.interactiveShell()
 
         self.saveResults()
 
