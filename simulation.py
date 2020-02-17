@@ -327,9 +327,10 @@ class Simulation:
 
         def help():
             print("List of commands:\n")
-            print("continue -- {0:20}".format("Step simulation forward"))
-            print("continue [step] -- {0:20}".format("Step simulation forward to particular step"))
-            print("exit/quit -- {0:20}".format("Quit simulation"))
+            print("{0:20} -- {1}".format("continue","Step simulation forward"))
+            print("{0:20} -- {1}".format("continue [step]","Step simulation forward to particular step"))
+            print("{0:20} -- {1}".format("exit/quit","Quit simulation"))
+            print("{0:20} -- {1}".format("help","Show this list of commands"))
 
         while(True):
             try:
