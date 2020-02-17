@@ -331,6 +331,19 @@ class Simulation:
             print("{0:20} -- {1}".format("continue [step]","Step simulation forward to particular step"))
             print("{0:20} -- {1}".format("exit/quit","Quit simulation"))
             print("{0:20} -- {1}".format("help","Show this list of commands"))
+            print("{0:20} -- {1}".format("print", "Print simulation variable"))
+
+        def printVar(self, args):
+            try:
+                if (not args[0].startswith("firms.")) and (not args[0].startswith("banks.")):
+                    raise ValueError
+                exec("print(self." + args[0] + ")")
+            except (ValueError, IndexError):
+                print("Invalid use of command: print")
+            except SyntaxError:
+                print("Invalid use of command: print")
+                print(str(args[0][:6]) + " has no attribute " + \
+                        str(args[0][6:]))
 
         while(True):
             try:
@@ -357,6 +370,8 @@ class Simulation:
                     break
                 elif ("help" == cmd) or ("h" == cmd):
                     help()
+                elif ("print" == cmd) or ("p" == cmd):
+                    printVar(self, args)
                 else:
                     exec(originalCommand)
             except EOFError:
