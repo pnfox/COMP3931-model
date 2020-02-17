@@ -324,6 +324,13 @@ class Simulation:
         f.close()
 
     def interactiveShell(self):
+
+        def help():
+            print("List of commands:\n")
+            print("continue -- {0:20}".format("Step simulation forward"))
+            print("continue [step] -- {0:20}".format("Step simulation forward to particular step"))
+            print("exit/quit -- {0:20}".format("Quit simulation"))
+
         while(True):
             try:
                 shellCommand = str(input(">>> "))
@@ -347,6 +354,8 @@ class Simulation:
                         print("\tUsage: continue [time to continue to]")
                         continue
                     break
+                elif ("help" == cmd) or ("h" == cmd):
+                    help()
                 else:
                     exec(originalCommand)
             except EOFError:
