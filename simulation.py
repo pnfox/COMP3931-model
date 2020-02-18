@@ -331,7 +331,22 @@ class Simulation:
             print("{0:20} -- {1}".format("continue [step]","Step simulation forward to particular step"))
             print("{0:20} -- {1}".format("exit/quit","Quit simulation"))
             print("{0:20} -- {1}".format("help","Show this list of commands"))
+            print("{0:20} -- {1}".format("list","List variables of simulation"))
             print("{0:20} -- {1}".format("print", "Print simulation variable"))
+
+        def listVariables(self):
+            print("\nVariables: {0:5}, {1:5}\n".format("firms", "banks"))
+            print("Firms attributes:")
+            print("\t{0:20} {1:20} {2:20}".format("numberOfFirms", "price", "debt"))
+            print("\t{0:20} {1:20} {2:20}".format("networth", "profit", "interestRate"))
+            print("\t{0:20} {1:20} {2:20}".format("leverage", "capital", "output"))
+            print("\t{0:20} {1:20}".format("lgdf", "default", "debt"))
+            print("\n")
+            print("Banks attributes:")
+            print("\t{0:20} {1:20} {2:20}".format("numberOfFirms", "price", "badDebt"))
+            print("\t{0:20} {1:20} {2:20}".format("networth", "profit", "interestRate"))
+            print("\t{0:20} {1:20} {2:20}".format("deposit", "creditLinkDegree", "nonPerformingLoans"))
+            print("\t{0:20}".format("default"))
 
         def printVar(self, args):
             try:
@@ -340,6 +355,9 @@ class Simulation:
                 exec("print(self." + args[0] + ")")
             except (ValueError, IndexError):
                 print("Invalid use of command: print")
+                print("Usage:")
+                print("\tprint [variable].[attribute]")
+                print("Use command list to see valid variables and attributes")
             except SyntaxError:
                 print("Invalid use of command: print")
                 print(str(args[0][:6]) + " has no attribute " + \
@@ -370,6 +388,8 @@ class Simulation:
                     break
                 elif ("help" == cmd) or ("h" == cmd):
                     help()
+                elif ("list" == cmd) or ("l" == cmd):
+                    listVariables(self)
                 elif ("print" == cmd) or ("p" == cmd):
                     printVar(self, args)
                 else:
