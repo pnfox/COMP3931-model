@@ -392,8 +392,6 @@ class Simulation:
                     listVariables(self)
                 elif ("print" == cmd) or ("p" == cmd):
                     printVar(self, args)
-                else:
-                    exec(originalCommand)
             except EOFError:
                 sys.exit()
             except AttributeError as e:
