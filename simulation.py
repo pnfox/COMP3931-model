@@ -325,6 +325,14 @@ class Simulation:
 
     def interactiveShell(self):
 
+        def continueCmd(self, args):
+            if (not args) or (args[0] == ""):
+                self.continueUntilTime = self.currentStep + 1
+            else:
+                self.continueUntilTime = int(args[0])
+            if self.continueUntilTime <= self.currentStep:
+                raise ValueError
+
         def help():
             print("List of commands:\n")
             print("{0:20} -- {1}".format("continue","Step simulation forward"))
@@ -378,11 +386,9 @@ class Simulation:
                     sys.exit()
                 elif ("continue" == cmd) or ("c" == cmd):
                     try:
-                        self.continueUntilTime = int(shellCommand[1])
-                        if self.continueUntilTime < self.currentStep:
-                            raise ValueError
+                        continueCmd(self, args)
                     except (ValueError, IndexError):
-                        print("Invalid use of command: Continue")
+                        print("Invalid use of command: continue")
                         print("\tUsage: continue [time to continue to]")
                         continue
                     break
