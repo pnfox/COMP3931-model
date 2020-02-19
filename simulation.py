@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import agents
+import sys
 
 class Simulation:
 
@@ -18,6 +19,7 @@ class Simulation:
             beta, # production function parameter
             rCB, # central bank interest rate
             cB, # banks costs
+            mode=None, # mode to run simulation
             seed=None,
             ):
         self.time = time
@@ -34,6 +36,9 @@ class Simulation:
         self.rCB = rCB
         self.cB = cB
         self.bestFirm = 0
+
+        self.mode = mode
+        self.continueUntilTime = 0
 
         if seed == None:
             self.seed = np.random.randint(9000)
@@ -318,9 +323,92 @@ class Simulation:
         np.savetxt(f, self.individualFirm, delimiter=",")
         f.close()
 
+    def interactiveShell(self):
+
+        def continueCmd(self, args):
+            if (not args) or (args[0] == ""):
+                self.continueUntilTime = self.currentStep + 1
+            else:
+                self.continueUntilTime = int(args[0])
+            if self.continueUntilTime <= self.currentStep:
+                raise ValueError
+            print("Continuing until time ", self.continueUntilTime)
+
+        def help():
+            print("List of commands:\n")
+            print("{0:20} -- {1}".format("continue","Step simulation forward"))
+            print("{0:20} -- {1}".format("continue [step]","Step simulation forward to particular step"))
+            print("{0:20} -- {1}".format("exit/quit","Quit simulation"))
+            print("{0:20} -- {1}".format("help","Show this list of commands"))
+            print("{0:20} -- {1}".format("list","List variables of simulation"))
+            print("{0:20} -- {1}".format("print", "Print simulation variable"))
+
+        def listVariables(self):
+            print("\nVariables: {0:5}, {1:5}\n".format("firms", "banks"))
+            print("Firms attributes:")
+            print("\t{0:20} {1:20} {2:20}".format("numberOfFirms", "price", "debt"))
+            print("\t{0:20} {1:20} {2:20}".format("networth", "profit", "interestRate"))
+            print("\t{0:20} {1:20} {2:20}".format("leverage", "capital", "output"))
+            print("\t{0:20} {1:20}".format("lgdf", "default", "debt"))
+            print("\n")
+            print("Banks attributes:")
+            print("\t{0:20} {1:20} {2:20}".format("numberOfFirms", "price", "badDebt"))
+            print("\t{0:20} {1:20} {2:20}".format("networth", "profit", "interestRate"))
+            print("\t{0:20} {1:20} {2:20}".format("deposit", "creditLinkDegree", "nonPerformingLoans"))
+            print("\t{0:20}".format("default"))
+
+        def printVar(self, args):
+            try:
+                if (not args[0].startswith("firms.")) and (not args[0].startswith("banks.")):
+                    raise ValueError
+                exec("print(self." + args[0] + ")")
+            except (ValueError, IndexError):
+                print("Invalid use of command: print")
+                print("Usage:")
+                print("\tprint [variable].[attribute]")
+                print("Use command list to see valid variables and attributes")
+            except SyntaxError:
+                print("Invalid use of command: print")
+                print(str(args[0][:6]) + " has no attribute " + \
+                        str(args[0][6:]))
+
+        while(True):
+            try:
+                shellCommand = str(input(">>> "))
+                originalCommand = shellCommand
+                shellCommand = shellCommand.lower().split(" ")
+                cmd = shellCommand[0]
+                args = shellCommand[1:]
+                if ("exit" == cmd) or ("quit" == cmd):
+                    print("Do you wish to save results?")
+                    answer = input("[Y/N] ").lower()
+                    if ("y" == answer) or ("yes" == answer):
+                        self.saveResults()
+                    sys.exit()
+                elif ("continue" == cmd) or ("c" == cmd):
+                    try:
+                        continueCmd(self, args)
+                    except (ValueError, IndexError):
+                        print("Invalid use of command: continue")
+                        print("\tUsage: continue [time to continue to]")
+                        continue
+                    break
+                elif ("help" == cmd) or ("h" == cmd):
+                    help()
+                elif ("list" == cmd) or ("l" == cmd):
+                    listVariables(self)
+                elif ("print" == cmd) or ("p" == cmd):
+                    printVar(self, args)
+            except EOFError:
+                print("Exiting simulation, results will not be saved")
+                sys.exit()
+            except AttributeError as e:
+                print(e)
+
     def run(self):
         print("Running Simulation...")
         for t in range(self.time):
+            self.currentStep = t
             # replace defaulted firms and banks
             try:
                 self.replaceDefaults()
@@ -370,6 +458,11 @@ class Simulation:
             self.updateBankNetWorth()
 
             self.reportResults(t)
+
+            if (self.mode == "Interactive") and \
+                    (self.continueUntilTime == self.currentStep):
+                print("Time: ", t)
+                self.interactiveShell()
 
         self.saveResults()
 
