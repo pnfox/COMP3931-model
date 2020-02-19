@@ -4,7 +4,7 @@ import sys
 import argparse
 
 parser = argparse.ArgumentParser(description="Economic ABM model simulation")
-parser.add_argument("-i", required=False, default=False, \
+parser.add_argument("-i", "--interactive", required=False, default=False, \
         action='store_true', dest='interactive', \
         help="interactive mode - Useful for debugging")
 
@@ -29,6 +29,8 @@ if __name__=="__main__":
     args = parser.parse_args()
     if(args.interactive):
         mode = "Interactive"
+    else:
+        mode = "Default"
 
     model = simulation.Simulation(simulationTime,
                             numberOfFirms,
