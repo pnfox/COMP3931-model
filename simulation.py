@@ -300,7 +300,19 @@ class Simulation:
 
         print("Writing simulation results with seed " + str(self.seed))
 
+        columnNames = ["Firms Aggregate Output", "Firms Aggregate Capital", \
+                "AVG Firm Price", "Firms Aggregate Wealth", "Firms Aggregate Debt", \
+                "Firms Aggregate Profit", "Total defaulted firms", \
+                "Banks Aggregate Wealth", "Banks Aggregate Debt", \
+                "Banks Aggregate Profit", "Total defaulted banks", \
+                "Economy GDP", "Average interest rate"]
+
         f = open(self.resultFolder + "aggregateResults.csv", "w+")
+
+        for name in columnNames:
+            f.write(name+", ")
+        f.write('\n')
+
         output = np.stack((self.firmOutputReport,
                                 self.firmCapitalReport,
                                 self.firmAvgPrice,
@@ -317,8 +329,15 @@ class Simulation:
         np.savetxt(f, output.transpose(), delimiter=",")
         f.close()
 
+        columnNames = ["Firm Output", "Firm Capital", "Firm Price", \
+                "Firm Networth", "Firm Debt", "Firm Profit", \
+                "Defaulted", "Firm Interest Rate"]
+
         # Write results for special firm
         f = open(self.resultFolder + "individualFirmResults.csv", "w+")
+        for name in columnNames:
+            f.write(name+", ")
+        f.write('\n')
         self.individualFirm = self.individualFirm[1:] # remove first row which is just zeros
         np.savetxt(f, self.individualFirm, delimiter=",")
         f.close()

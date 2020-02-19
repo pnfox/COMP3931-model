@@ -57,7 +57,7 @@ def openSimulationFile(folder):
     try:
         with open(folder + "aggregateResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = np.array(list(reader), dtype=float)
+            lines = np.array(list(reader)[1:], dtype=float)
             firms.output = lines.transpose()[0]
             firms.capital = lines.transpose()[1]
             firms.price = lines.transpose()[2]
@@ -74,7 +74,7 @@ def openSimulationFile(folder):
             economy.get("Avg interest").append(lines.transpose()[12])
         with open(folder + "individualFirmResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = np.array(list(reader), dtype=float)
+            lines = np.array(list(reader)[1:], dtype=float)
             individualFirm.output = lines.transpose()[0]
             individualFirm.capital = lines.transpose()[1]
             individualFirm.price = lines.transpose()[2]
