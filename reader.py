@@ -35,30 +35,6 @@ def checkChange(data, data2):
             print("Change in data1: " + str(changeInData1))
             print("Change in data2: " + str(changeInData2))
 
-def getObject(A, time):
-    if not type(A) == dict:
-        print("Error printObject: expected type(A) as dict")
-        return
-    if not type(time) == int:
-        print("Error printObject: expected type(time) as int")
-        return
-
-    print("Printing object at time ", time)
-    index = 0
-    for k in A.keys():
-        print(k + ": " + str(A.get(k)[time]))
-        index += 1
-
-def getObjectValue(A, time, value):
-    if not type(A) == dict:
-        print("Error printObject: expected type(A) as dict")
-        return
-    if not type(time) == int:
-        print("Error printObject: expected type(time) as int")
-        return
-
-    print(A.get(value)[time])
-
 def openSimulationFile(folder):
 
     firmsKeys = ['Output', 'Capital',
@@ -81,7 +57,7 @@ def openSimulationFile(folder):
     try:
         with open(folder + "aggregateResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = np.array(list(reader), dtype=float)
+            lines = np.array(list(reader)[1:], dtype=float)
             firms.output = lines.transpose()[0]
             firms.capital = lines.transpose()[1]
             firms.price = lines.transpose()[2]
@@ -98,7 +74,7 @@ def openSimulationFile(folder):
             economy.get("Avg interest").append(lines.transpose()[12])
         with open(folder + "individualFirmResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = np.array(list(reader), dtype=float)
+            lines = np.array(list(reader)[1:], dtype=float)
             individualFirm.output = lines.transpose()[0]
             individualFirm.capital = lines.transpose()[1]
             individualFirm.price = lines.transpose()[2]
@@ -141,19 +117,50 @@ def executeCommand(cmd):
     cmd = cmd.lower()
     cmd = cmd.split(" ")
 
-    availableCommands = ["plot"]
-
     args = ""
-    if cmd[0] in availableCommands:
+    if cmd[0] == "exec":
+        exec(cmd[1])
+    if cmd[0] == "exit" or cmd[0] == "quit":
+        raise EOFError
+    if cmd[0] == "plot":
+
         for i in cmd[1:]:
             if (not i.startswith("firms")) and (not i.startswith("banks")) \
                     and (not i.startswith("individual")):
-                print("Discarding invalid argument: ", i)
+                print("Invalid argument: ", i)
                 continue
             else:
                 args += i+","
+        if args == "":
+            return
         # if we get here cmd is valid
         exec(cmd[0] + "(" + args + ")")
+    if cmd[0] == "help":
+        print("List of commands:\n")
+        print("{0:20} -- {1}".format("exec [python code]", "USE WITH CARE"))
+        print("{0:20} -- {1}".format("exit/quit", "Quit simulation reader")) 
+        print("{0:20} -- {1}".format("plot [data list]", "Plots data as line graph"))
+        print("{0:20} -- {1}".format("plot [data list1] [data list2]", "Plots data as line graph"))
+        print("{0:20} -- {1}".format("help", "Shows this list of commands"))
+    if cmd[0] == "list":
+        print("\nVariables: {0:5}, {1:5}, {1:5}\n".format("firms", "individualFirm", "banks"))
+        print("Firms attributes:")
+        print("\t{0:20} {1:20}".format("price", "debt"))
+        print("\t{0:20} {1:20}".format("networth", "profit"))
+        print("\t{0:20} {1:20}".format("capital", "output"))
+        print("\t{0:20}".format("default"))
+        print("\n")
+        print("Individual Firm attributes:")
+        print("\t{0:20} {1:20}".format("price", "debt"))
+        print("\t{0:20} {1:20}".format("networth", "profit"))
+        print("\t{0:20} {1:20}".format("capital", "output"))
+        print("\t{0:20} {1:20}".format("default", "interest"))
+        print("\n")
+        print("Banks attributes:")
+        print("\t{0:20} {1:20}".format("networth", "badDebt"))
+        print("\t{0:20} {1:20}".format("profit", "default"))
+
+
 
 if __name__=="__main__":
     folders = glob.glob("results/*/")
@@ -164,6 +171,7 @@ if __name__=="__main__":
             if choice != -1:
                 break
         except EOFError:
+            print("Exiting reader")
             sys.exit()
 
     print("Opening results from " + folders[choice])
@@ -172,11 +180,9 @@ if __name__=="__main__":
     while(True):
         try:
             shellCommand = str(input(">>> ")).lower()
-            if ("exit" in shellCommand) or ("quit" in shellCommand):
-                sys.exit()
-            else:
-                executeCommand(shellCommand)
+            executeCommand(shellCommand)
         except EOFError:
+            print("Exiting reader")
             sys.exit()
         except AttributeError as e:
             print(e)
