@@ -1,6 +1,12 @@
 import numpy as np
 import simulation
 import sys
+import argparse
+
+parser = argparse.ArgumentParser(description="Economic ABM model simulation")
+parser.add_argument("-i", required=False, default=False, \
+        action='store_true', dest='interactive', \
+        help="interactive mode - Useful for debugging")
 
 
 if __name__=="__main__":
@@ -20,10 +26,9 @@ if __name__=="__main__":
     rCB = 0.02 # central bank interest rate
     cB = 0.01 # banks costs
 
-    if (sys.argv[1] == "-i") or (sys.argv[1] == "--interactive"):
+    args = parser.parse_args()
+    if(args.interactive):
         mode = "Interactive"
-    else:
-        mode = None
 
     model = simulation.Simulation(simulationTime,
                             numberOfFirms,

@@ -332,6 +332,7 @@ class Simulation:
                 self.continueUntilTime = int(args[0])
             if self.continueUntilTime <= self.currentStep:
                 raise ValueError
+            print("Continuing until time ", self.continueUntilTime)
 
         def help():
             print("List of commands:\n")
@@ -399,6 +400,7 @@ class Simulation:
                 elif ("print" == cmd) or ("p" == cmd):
                     printVar(self, args)
             except EOFError:
+                print("Exiting simulation, results will not be saved")
                 sys.exit()
             except AttributeError as e:
                 print(e)
