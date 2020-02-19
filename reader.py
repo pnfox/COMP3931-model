@@ -35,30 +35,6 @@ def checkChange(data, data2):
             print("Change in data1: " + str(changeInData1))
             print("Change in data2: " + str(changeInData2))
 
-def getObject(A, time):
-    if not type(A) == dict:
-        print("Error printObject: expected type(A) as dict")
-        return
-    if not type(time) == int:
-        print("Error printObject: expected type(time) as int")
-        return
-
-    print("Printing object at time ", time)
-    index = 0
-    for k in A.keys():
-        print(k + ": " + str(A.get(k)[time]))
-        index += 1
-
-def getObjectValue(A, time, value):
-    if not type(A) == dict:
-        print("Error printObject: expected type(A) as dict")
-        return
-    if not type(time) == int:
-        print("Error printObject: expected type(time) as int")
-        return
-
-    print(A.get(value)[time])
-
 def openSimulationFile(folder):
 
     firmsKeys = ['Output', 'Capital',
