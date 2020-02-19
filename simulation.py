@@ -2,6 +2,7 @@ import numpy as np
 import os
 import agents
 import sys
+import time
 
 class Simulation:
 
@@ -298,9 +299,41 @@ class Simulation:
             if "N" in override.upper() or ("N" in override.upper() and "Y" in override.upper()):
                 exit()
 
+        infoFile = open(self.resultFolder + "INFO", "+w")
+        infoFile.write("Simulation Configuration\n")
+        infoFile.write("\t{0:35} = {1:5}\n".format("Seed", self.seed))
+        date = time.strftime("%d %b %Y: %H:%M", time.gmtime())
+        infoFile.write("\t{0:35} = {1:5}\n".format("Date ran", date))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Total Steps", self.time))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Number of Firms", self.numberOfFirms))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Number of Banks", self.numberOfBanks))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Price Mean (alpha)", self.alpha))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Price Variance", self.varpf))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Interest rate param (gamma)", self.gamma))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Number of potential parters (chi)", self.chi))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Intensity of choice (lambd)", self.lambd))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Leverage adjustment (adj)", self.adj))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Production function param (phi)", self.phi))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Production function param (beta)", self.beta))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Central bank interest rate (rCB)", self.rCB))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Bank costs (cB)", self.cB))
+        infoFile.close()
+
         print("Writing simulation results with seed " + str(self.seed))
 
+        columnNames = ["Firms Aggregate Output", "Firms Aggregate Capital", \
+                "AVG Firm Price", "Firms Aggregate Wealth", "Firms Aggregate Debt", \
+                "Firms Aggregate Profit", "Total defaulted firms", \
+                "Banks Aggregate Wealth", "Banks Aggregate Debt", \
+                "Banks Aggregate Profit", "Total defaulted banks", \
+                "Economy GDP", "Average interest rate"]
+
         f = open(self.resultFolder + "aggregateResults.csv", "w+")
+
+        for name in columnNames:
+            f.write(name+", ")
+        f.write('\n')
+
         output = np.stack((self.firmOutputReport,
                                 self.firmCapitalReport,
                                 self.firmAvgPrice,
@@ -317,8 +350,15 @@ class Simulation:
         np.savetxt(f, output.transpose(), delimiter=",")
         f.close()
 
+        columnNames = ["Firm Output", "Firm Capital", "Firm Price", \
+                "Firm Networth", "Firm Debt", "Firm Profit", \
+                "Defaulted", "Firm Interest Rate"]
+
         # Write results for special firm
         f = open(self.resultFolder + "individualFirmResults.csv", "w+")
+        for name in columnNames:
+            f.write(name+", ")
+        f.write('\n')
         self.individualFirm = self.individualFirm[1:] # remove first row which is just zeros
         np.savetxt(f, self.individualFirm, delimiter=",")
         f.close()
