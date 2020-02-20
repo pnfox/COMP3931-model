@@ -10,32 +10,32 @@ class Simulation:
             time, # time simulation is ran for
             numberOfFirms,
             numberOfBanks,
-            alpha, # mean of firms price
-            varpf, # variance of firms price
-            gamma, # interest rate parameter
-            chi, # number of potential partners on credit market
-            lambd, # intensity of choice
-            adj, # leverage adjustment
-            phi, # production function parameter
-            beta, # production function parameter
-            rCB, # central bank interest rate
-            cB, # banks costs
+            alpha=0.1, # mean of firms price
+            varpf=0.4, # variance of firms price
+            gamma=0.02, # interest rate parameter
+            chi=5, # number of potential partners on credit market
+            lambd=4, # intensity of choice
+            adj=0.1, # leverage adjustment
+            phi=3, # production function parameter
+            beta=0.7, # production function parameter
+            rCB=0.02, # central bank interest rate
+            cB=0.01, # banks costs
             mode=None, # mode to run simulation
             seed=None,
             ):
-        self.time = time
-        self.numberOfFirms = numberOfFirms
-        self.numberOfBanks = numberOfBanks
-        self.alpha = alpha
-        self.varpf = varpf
-        self.gamma = gamma
-        self.chi = chi
-        self.lambd = lambd
-        self.adj = adj
-        self.phi = phi
-        self.beta = beta
-        self.rCB = rCB
-        self.cB = cB
+        self.time = int(time)
+        self.numberOfFirms = int(numberOfFirms)
+        self.numberOfBanks = int(numberOfBanks)
+        self.alpha = float(alpha)
+        self.varpf = float(varpf)
+        self.gamma = float(gamma)
+        self.chi = int(chi)
+        self.lambd = float(lambd)
+        self.adj = float(adj)
+        self.phi = float(phi)
+        self.beta = float(beta)
+        self.rCB = float(rCB)
+        self.cB = float(cB)
         self.bestFirm = 0
 
         self.mode = mode
@@ -44,16 +44,16 @@ class Simulation:
         if seed == None:
             self.seed = np.random.randint(9000)
         else:
-            self.seed = seed
+            self.seed = int(seed)
 
         np.random.seed(self.seed)
 
-        self.firms = agents.Firms(numberOfFirms, self.alpha, self.varpf)
+        self.firms = agents.Firms(self.numberOfFirms, self.alpha, self.varpf)
 
-        self.banks = agents.Banks(numberOfBanks)
+        self.banks = agents.Banks(self.numberOfBanks)
 
         # firms-banks credit matching adjacency matrix
-        self.link_fb = np.zeros((numberOfFirms, numberOfBanks))
+        self.link_fb = np.zeros((self.numberOfFirms, self.numberOfBanks))
         banksWithFirms = np.ceil(np.random.uniform(0, self.numberOfBanks-1, self.numberOfFirms))
         for i in range(self.numberOfFirms):
             self.link_fb[i][int(banksWithFirms[i])] = 1
