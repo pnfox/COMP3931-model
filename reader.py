@@ -3,6 +3,7 @@ import glob
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.svm import SVC
 import agents
 
 resultNames = {0: "Output", 1: "Capital",
@@ -25,6 +26,44 @@ def plot(data, data2=None, data3=None, data4=None, title=""):
     except NameError:
         print("Error plot: data must be passed to function")
         return
+
+def classify(data, firms):
+    
+    # Data classes:
+    #   class 0: decreasing value
+    #   class 1: increasing value
+    #   class 2: little change
+    classifiedData = np.array([])
+    tol = 600
+
+    previousValue = data[0]
+    for i in data:
+        if i == data[0]:
+            continue
+        if i < previousValue - tol:
+            classifiedData = np.append(classifiedData, 0)
+        elif i > previousValue + tol:
+            classifiedData = np.append(classifiedData, 1)
+        else:
+            classifiedData = np.append(classifiedData, 2)
+        previousValue = i
+
+    classifier = SVC(kernel='linear')
+
+    X = np.stack((firms.capital[1:], firms.price[1:], firms.networth[1:], \
+            firms.debt[1:], firms.profit[1:])).transpose()
+
+    classifier.fit(X, classifiedData)
+    print(classifier.coef_)
+    time = np.linspace(1, len(classifiedData)+1, num=len(classifiedData))
+
+    plt.scatter(time, firms.output[1:], c=classifiedData)
+    plt.show()
+
+    plt.scatter(firms.networth[1:], firms.profit[1:], c=classifiedData)
+    plt.show()
+
+    return classifiedData
 
 def checkChange(data, data2):
     for i in range(1, len(data)):
@@ -57,7 +96,7 @@ def openSimulationFile(folder):
     try:
         with open(folder + "aggregateResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = np.array(list(reader)[1:], dtype=float)
+            lines = np.array(list(reader)[300:], dtype=float) # ignore first 300 lines
             firms.output = lines.transpose()[0]
             firms.capital = lines.transpose()[1]
             firms.price = lines.transpose()[2]
@@ -122,7 +161,7 @@ def executeCommand(cmd):
         exec(cmd[1])
     if cmd[0] == "exit" or cmd[0] == "quit":
         raise EOFError
-    if cmd[0] == "plot":
+    if cmd[0] == "plot" or cmd[0] == "classify":
 
         for i in cmd[1:]:
             if (not i.startswith("firms")) and (not i.startswith("banks")) \
@@ -159,7 +198,6 @@ def executeCommand(cmd):
         print("Banks attributes:")
         print("\t{0:20} {1:20}".format("networth", "badDebt"))
         print("\t{0:20} {1:20}".format("profit", "default"))
-
 
 
 if __name__=="__main__":
