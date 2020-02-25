@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.svm import SVC
 import agents
+import analyse
 
 resultNames = {0: "Output", 1: "Capital",
             2 : "Price", 3 : "Wealth",
@@ -53,14 +54,39 @@ def classify(data, firms):
     X = np.stack((firms.capital[1:], firms.price[1:], firms.networth[1:], \
             firms.debt[1:], firms.profit[1:])).transpose()
 
-    classifier.fit(X, classifiedData)
-    print(classifier.coef_)
+    #classifier.fit(X, classifiedData)
     time = np.linspace(1, len(classifiedData)+1, num=len(classifiedData))
 
-    plt.scatter(time, firms.output[1:], c=classifiedData)
+    points = np.stack((time, firms.output[1:]), axis=-1)
+    interpolatedPoints = analyse.splineData(points)
+    dy = np.gradient(interpolatedPoints[:,1])
+    stationaryPoints = analyse.findStationaryPoints(dy)
+
+    # calculate information about stationaryPoints
+    distances = np.array([])
+    angles = np.array([])
+    j = stationaryPoints[0]
+    for i in stationaryPoints[1:]:
+        x1 = interpolatedPoints[j,0]
+        x2 = interpolatedPoints[i,0]
+        y1 = interpolatedPoints[j,1]
+        y2 = interpolatedPoints[i,1]
+        dist = np.sqrt((x2-x1)**2+(y2-y1)**2)
+        distances = np.append(distances, dist)
+        angles = np.append(angles, np.arccos((x2-x1)/dist))
+        j = i
+
+    avgAngle = np.mean(angles)
+    change = np.ceil(distances*(angles/avgAngle))
+    change = np.append(change, 0)
+
+    plt.hist(change)
     plt.show()
 
-    plt.scatter(firms.networth[1:], firms.profit[1:], c=classifiedData)
+    # plot stationaryPoints
+    plt.plot(time, firms.output[1:])
+    plt.scatter(interpolatedPoints[stationaryPoints,0], \
+            interpolatedPoints[stationaryPoints,1], c=change)
     plt.show()
 
     return classifiedData
@@ -113,7 +139,7 @@ def openSimulationFile(folder):
             economy.get("Avg interest").append(lines.transpose()[12])
         with open(folder + "individualFirmResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = np.array(list(reader)[1:], dtype=float)
+            lines = np.array(list(reader)[300:], dtype=float)
             individualFirm.output = lines.transpose()[0]
             individualFirm.capital = lines.transpose()[1]
             individualFirm.price = lines.transpose()[2]
