@@ -35,18 +35,48 @@ def findStationaryPoints(data):
     diff = np.fabs(np.diff(data))
     avgDiff = np.mean(diff)
     variance = np.var(diff)
-    print("Average difference: ", avgDiff)
-    print("Difference variance: ", variance)
     index = 0
     for i in data:
         if index == len(data)-1:
             continue
-        diff = np.fabs(data[index] - data[index+1])
-        #if data[index] < avgDiff and data[index] > -avgDiff:
         if data[index]*data[index+1] < 0:
-        #if diff < 1.4*np.sqrt(variance)*avgDiff:
             stationaryPoints = np.append(stationaryPoints, index)
         index += 1
 
     return stationaryPoints
 
+#
+# Returns a list of points where the GDP increased/decreased significantly
+# These points are integer values calculated by
+#           Euclidian distance to next point * (angle / mean angle)
+# Large positive integers denote a large increase in GDP while large negative
+# values denote a large decrease in GDP
+#
+def outputVolatility(firms):
+
+    time = np.linspace(start=0, stop=len(firms.output), num=len(firms.output)-1)
+
+    points = np.stack((time, firms.output[1:]), axis=-1)
+    interpolatedPoints = splineData(points)
+    dy = np.gradient(np.gradient(interpolatedPoints[:,1]))
+    stationaryPoints = findStationaryPoints(dy)
+
+    # calculate information about stationaryPoints
+    distances = np.array([])
+    angles = np.array([])
+    j = stationaryPoints[0]
+    for i in stationaryPoints[1:]:
+        x1 = interpolatedPoints[j,0]
+        x2 = interpolatedPoints[i,0]
+        y1 = interpolatedPoints[j,1]
+        y2 = interpolatedPoints[i,1]
+        dist = np.sqrt((x2-x1)**2+(y2-y1)**2)
+        distances = np.append(distances, dist)
+        angles = np.append(angles, np.arcsin((y2-y1)/dist))
+        j = i
+
+    avgAngle = np.fabs(np.mean(angles))
+    change = np.ceil(distances*(angles/avgAngle))
+    change = np.append(change, 0)
+
+    return change

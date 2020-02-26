@@ -2,6 +2,7 @@ import sys
 import glob
 import csv
 import numpy as np
+from matplotlib import colors
 import matplotlib.pyplot as plt
 from sklearn.svm import SVC
 import agents
@@ -28,68 +29,25 @@ def plot(data, data2=None, data3=None, data4=None, title=""):
         print("Error plot: data must be passed to function")
         return
 
-def classify(data, firms):
+def classify(firms):
     
-    # Data classes:
-    #   class 0: decreasing value
-    #   class 1: increasing value
-    #   class 2: little change
-    classifiedData = np.array([])
-    tol = 600
-
-    previousValue = data[0]
-    for i in data:
-        if i == data[0]:
-            continue
-        if i < previousValue - tol:
-            classifiedData = np.append(classifiedData, 0)
-        elif i > previousValue + tol:
-            classifiedData = np.append(classifiedData, 1)
-        else:
-            classifiedData = np.append(classifiedData, 2)
-        previousValue = i
-
-    classifier = SVC(kernel='linear')
-
-    X = np.stack((firms.capital[1:], firms.price[1:], firms.networth[1:], \
-            firms.debt[1:], firms.profit[1:])).transpose()
-
-    #classifier.fit(X, classifiedData)
-    time = np.linspace(1, len(classifiedData)+1, num=len(classifiedData))
-
-    points = np.stack((time, firms.output[1:]), axis=-1)
-    interpolatedPoints = analyse.splineData(points)
-    dy = np.gradient(interpolatedPoints[:,1])
-    stationaryPoints = analyse.findStationaryPoints(dy)
-
-    # calculate information about stationaryPoints
-    distances = np.array([])
-    angles = np.array([])
-    j = stationaryPoints[0]
-    for i in stationaryPoints[1:]:
-        x1 = interpolatedPoints[j,0]
-        x2 = interpolatedPoints[i,0]
-        y1 = interpolatedPoints[j,1]
-        y2 = interpolatedPoints[i,1]
-        dist = np.sqrt((x2-x1)**2+(y2-y1)**2)
-        distances = np.append(distances, dist)
-        angles = np.append(angles, np.arccos((x2-x1)/dist))
-        j = i
-
-    avgAngle = np.mean(angles)
-    change = np.ceil(distances*(angles/avgAngle))
-    change = np.append(change, 0)
-
-    plt.hist(change)
-    plt.show()
+    time = np.linspace(0, len(firms.output), num=len(firms.output)-1)
+    p = np.stack((time, firms.output[1:]), axis=-1)
+    interpolatedPoints = analyse.splineData(p)
+    ddy = np.gradient(np.gradient(interpolatedPoints[:,1]))
+    stationaryPoints = analyse.findStationaryPoints(ddy)
+    change = analyse.outputVolatility(firms)
 
     # plot stationaryPoints
     plt.plot(time, firms.output[1:])
+    norm = colors.Normalize(vmin=np.amin(change), vmax=np.amax(change))
     plt.scatter(interpolatedPoints[stationaryPoints,0], \
-            interpolatedPoints[stationaryPoints,1], c=change)
+            interpolatedPoints[stationaryPoints,1], c=change, \
+            vmin=np.amin(change), vmax=np.amax(change), cmap='hot', norm=norm)
+    plt.colorbar()
     plt.show()
 
-    return classifiedData
+    return
 
 def checkChange(data, data2):
     for i in range(1, len(data)):
