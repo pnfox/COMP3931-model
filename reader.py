@@ -49,15 +49,6 @@ def classify(firms):
 
     return
 
-def checkChange(data, data2):
-    for i in range(1, len(data)):
-        changeInData1 = data[i] - data[i-1]
-        changeInData2 = data2[i] - data2[i-1]
-        if changeInData1 * changeInData2 < 0:
-            print("Change not off the same sign at " + str(i))
-            print("Change in data1: " + str(changeInData1))
-            print("Change in data2: " + str(changeInData2))
-
 def openSimulationFile(folder):
 
     firmsKeys = ['Output', 'Capital',

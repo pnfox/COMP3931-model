@@ -27,6 +27,7 @@ def splineData(data):
     spline = np.stack((splineX, splineY), axis=-1)
 
     return spline
+
 #
 # Returns the indices where stationaryPoints occur in data
 #
