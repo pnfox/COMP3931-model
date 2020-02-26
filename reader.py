@@ -1,6 +1,7 @@
 import sys
 import glob
 import csv
+import re
 import numpy as np
 from matplotlib import colors
 import matplotlib.pyplot as plt
@@ -49,7 +50,7 @@ def classify(firms):
 
     return
 
-def openSimulationFile(folder):
+def openSimulationFiles(folder):
 
     firmsKeys = ['Output', 'Capital',
             'Price', 'Wealth',
@@ -63,6 +64,9 @@ def openSimulationFile(folder):
             'Profit', 'Default']
 
     economy = {"GDP": [], "Avg interest":[]}
+    parameters = {"seed": [], "date": [], "steps": [], "firms": [], "banks": [], \
+                "mean": [], "variance": [], "gamma": [], "lambd": [], \
+                "adj": [], "phi": [], "beta": [], "rcb": [], "cb": []}
 
     firms = agents.Firms()
     banks = agents.Banks()
@@ -97,6 +101,18 @@ def openSimulationFile(folder):
             individualFirm.profit = lines.transpose()[5]
             individualFirm.default = lines.transpose()[6]
             individualFirm.interest = lines.transpose()[7]
+        with open(folder + "INFO", "r") as f:
+            lines = list(f)
+            index = 0
+            for line in lines:
+                line = line.lower().split()
+                value = line[-1]
+                for key in parameters.keys():
+                    for word in line:
+                        if re.match('.*'+key+'.*', word):
+                            parameters.update({key: value})
+            print(parameters)
+
     except FileNotFoundError:
         print("No file found")
         exit()
@@ -188,7 +204,7 @@ if __name__=="__main__":
             sys.exit()
 
     print("Opening results from " + folders[choice])
-    firms, banks, individualFirm = openSimulationFile(folders[choice])
+    firms, banks, individualFirm = openSimulationFiles(folders[choice])
 
     while(True):
         try:
