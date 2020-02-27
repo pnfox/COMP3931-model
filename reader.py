@@ -5,7 +5,9 @@ import re
 import numpy as np
 from matplotlib import colors
 import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
 from sklearn.svm import SVC
+from sklearn import preprocessing
 import agents
 import analyse
 
@@ -30,22 +32,58 @@ def plot(data, data2=None, data3=None, data4=None, title=""):
         print("Error plot: data must be passed to function")
         return
 
-def classify(firms):
-    
-    time = np.linspace(0, len(firms.output), num=len(firms.output)-1)
-    p = np.stack((time, firms.output[1:]), axis=-1)
-    interpolatedPoints = analyse.splineData(p)
-    ddy = np.gradient(np.gradient(interpolatedPoints[:,1]))
-    stationaryPoints = analyse.findStationaryPoints(ddy)
-    change = analyse.outputVolatility(firms)
+def classify(key):
 
-    # plot stationaryPoints
-    plt.plot(time, firms.output[1:])
-    norm = colors.Normalize(vmin=np.amin(change), vmax=np.amax(change))
-    plt.scatter(interpolatedPoints[stationaryPoints,0], \
-            interpolatedPoints[stationaryPoints,1], c=change, \
-            vmin=np.amin(change), vmax=np.amax(change), cmap='hot', norm=norm)
-    plt.colorbar()
+    if not key:
+        print("Must give firms attributes")
+        return
+  
+    simulationRuns = np.array([])
+    Y = np.array([])
+    for folder in glob.glob("results/*/"):
+        firms, banks, individualFirm, paramters = openSimulationFiles(folder)
+
+        time = np.linspace(0, len(firms.output), num=len(firms.output)-1)
+        p = np.stack((time, firms.output[1:]), axis=-1)
+        interpolatedPoints = analyse.splineData(p)
+        ddy = np.gradient(np.gradient(interpolatedPoints[:,1]))
+        stationaryPoints = analyse.findStationaryPoints(ddy)
+        change = analyse.outputVolatility(firms)
+
+        Y = np.append(Y, float(paramters.get(key)))
+
+        # Store imporant simulation features
+        features = np.stack((len(stationaryPoints),
+                            np.mean(change),
+                            np.var(change),
+                            np.sum(firms.default),
+                            np.sum(banks.default),
+                            np.mean(firms.output),
+                            np.mean(banks.profit),
+                            np.mean(banks.interestRate)))
+        for param in paramters.values():
+            try:
+                features = np.append(features, float(param))
+            except ValueError:
+                continue
+
+        if not np.any(simulationRuns):
+            simulationRuns = features
+        else:
+            simulationRuns = np.vstack((simulationRuns, features))
+
+    #classifier = PCA().fit(simulationRuns)
+    #X = classifier.transform(simulationRuns)
+    #print(classifier.n_components_)
+    #print(classifier.explained_variance_ratio_)
+
+    classifier = SVC()
+    encoder = preprocessing.LabelEncoder()
+    Yclass = encoder.fit_transform(Y)
+    classifier.fit(simulationRuns, Yclass)
+
+    print(classifier.dual_coef_)
+    plt.scatter(simulationRuns[:,0], simulationRuns[:,1], c=Y)
     plt.show()
 
     return
@@ -111,13 +149,12 @@ def openSimulationFiles(folder):
                     for word in line:
                         if re.match('.*'+key+'.*', word):
                             parameters.update({key: value})
-            print(parameters)
 
     except FileNotFoundError:
         print("No file found")
         exit()
 
-    return firms, banks, individualFirm
+    return firms, banks, individualFirm, parameters
 
 def selectResults(files):
     choice = 0
@@ -152,7 +189,10 @@ def executeCommand(cmd):
         exec(cmd[1])
     if cmd[0] == "exit" or cmd[0] == "quit":
         raise EOFError
-    if cmd[0] == "plot" or cmd[0] == "classify":
+    if cmd[0] == "classify":
+        print("Performing simulation classification")
+        classify()
+    if cmd[0] == "plot":
 
         for i in cmd[1:]:
             if (not i.startswith("firms")) and (not i.startswith("banks")) \
@@ -204,7 +244,7 @@ if __name__=="__main__":
             sys.exit()
 
     print("Opening results from " + folders[choice])
-    firms, banks, individualFirm = openSimulationFiles(folders[choice])
+    firms, banks, individualFirm, parameters = openSimulationFiles(folders[choice])
 
     while(True):
         try:
