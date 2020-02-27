@@ -42,7 +42,7 @@ class Simulation:
         self.continueUntilTime = 0
 
         if seed == None:
-            self.seed = np.random.randint(9000)
+            self.seed = np.random.randint(900000)
         else:
             self.seed = int(seed)
 
