@@ -34,10 +34,9 @@ def plot(data, data2=None, data3=None, data4=None, title=""):
 
 def classify(key):
 
-    if not key:
-        print("Must give firms attributes")
-        return
-  
+    if not key or type(key) != str:
+        raise ValueError
+
     simulationRuns = np.array([])
     Y = np.array([])
     for folder in glob.glob("results/*/"):
@@ -80,10 +79,14 @@ def classify(key):
     classifier = SVC()
     encoder = preprocessing.LabelEncoder()
     Yclass = encoder.fit_transform(Y)
-    classifier.fit(simulationRuns, Yclass)
+    try:
+        classifier.fit(simulationRuns, Yclass)
+    except ValueError:
+        print("Only one class found for {0:5}".format(key))
+        return
 
     print(classifier.dual_coef_)
-    plt.scatter(simulationRuns[:,0], simulationRuns[:,1], c=Y)
+    plt.scatter(simulationRuns[:,1], simulationRuns[:,2], c=Y)
     plt.show()
 
     return
@@ -190,8 +193,10 @@ def executeCommand(cmd):
     if cmd[0] == "exit" or cmd[0] == "quit":
         raise EOFError
     if cmd[0] == "classify":
-        print("Performing simulation classification")
-        classify()
+        try:
+            classify(cmd[1])
+        except (IndexError, TypeError):
+            print("Usage: classify [simulation attribute]")
     if cmd[0] == "plot":
 
         for i in cmd[1:]:
