@@ -1,4 +1,5 @@
 import sys
+import traceback
 import glob
 import csv
 import re
@@ -85,8 +86,16 @@ def classify(key):
         print("Only one class found for {0:5}".format(key))
         return
 
-    print(classifier.dual_coef_)
-    plt.scatter(simulationRuns[:,1], simulationRuns[:,2], c=Y)
+    fig, ax = plt.subplots()
+    numOfClasses = 4
+    for i in range(numOfClasses):
+        classRuns = np.where(Yclass == i)[0]
+        classLabel = key+"="+str(Y[classRuns][0])
+        ax.scatter(simulationRuns[classRuns,13], \
+            simulationRuns[classRuns,2], \
+            label=classLabel)
+
+    plt.legend()
     plt.show()
 
     return
