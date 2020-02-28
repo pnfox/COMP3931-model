@@ -87,7 +87,7 @@ def classify(key):
         return
 
     fig, ax = plt.subplots()
-    numOfClasses = 4
+    numOfClasses = 3
     for i in range(numOfClasses):
         classRuns = np.where(Yclass == i)[0]
         classLabel = key+"="+str(Y[classRuns][0])
@@ -99,6 +99,20 @@ def classify(key):
     plt.show()
 
     return
+
+#
+# Returns the simulation with a parameter (key) = value
+#
+def findSimulations(key, value):
+
+    sims = np.array([])
+    for folder in glob.glob("results/*/"):
+        firms, banks, individualFirm, parameters = openSimulationFiles(folder)
+
+        if parameters.get(key) == value:
+            sims = np.append(sims, folder)
+
+    return sims
 
 def openSimulationFiles(folder):
 
