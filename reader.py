@@ -227,6 +227,8 @@ def executeCommand(cmd):
         print(findSimulations(cmd[1], cmd[2]))
     if cmd[0] == "open":
         choice = selectResults(folders)
+        if choice > len(folders) or choice < 0:
+            return
         print("Opening results from " + folders[choice])
         global firms, banks, individualFirm
         firms, banks, individualFirm, parameters = openSimulationFiles(folders[choice])
