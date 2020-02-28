@@ -112,6 +112,9 @@ def findSimulations(key, value):
         if parameters.get(key) == value:
             sims = np.append(sims, folder)
 
+    if len(sims) == 0:
+        print("No simulation found with " + key + "=" + value)
+
     return sims
 
 def openSimulationFiles(folder):
@@ -211,15 +214,23 @@ def executeCommand(cmd):
     cmd = cmd.split(" ")
 
     args = ""
-    if cmd[0] == "exec":
-        exec(cmd[1])
-    if cmd[0] == "exit" or cmd[0] == "quit":
-        raise EOFError
     if cmd[0] == "classify":
         try:
             classify(cmd[1])
         except (IndexError, TypeError):
             print("Usage: classify [simulation attribute]")
+    if cmd[0] == "exec":
+        exec(cmd[1])
+    if cmd[0] == "exit" or cmd[0] == "quit":
+        raise EOFError
+    if cmd[0] == "find":
+        print(findSimulations(cmd[1], cmd[2]))
+    if cmd[0] == "open":
+        choice = selectResults(folders)
+        print("Opening results from " + folders[choice])
+        global firms, banks, individualFirm
+        firms, banks, individualFirm, parameters = openSimulationFiles(folders[choice])
+
     if cmd[0] == "plot":
 
         for i in cmd[1:]:
@@ -236,7 +247,9 @@ def executeCommand(cmd):
     if cmd[0] == "help":
         print("List of commands:\n")
         print("{0:20} -- {1}".format("exec [python code]", "USE WITH CARE"))
-        print("{0:20} -- {1}".format("exit/quit", "Quit simulation reader")) 
+        print("{0:20} -- {1}".format("exit/quit", "Quit simulation reader"))
+        print("{0:20} -- {1}".format("find [parameter] [value]", "Finds simulations with parameter=value"))
+        print("{0:20} -- {1}".format("open", "Open simulation files for analysis"))
         print("{0:20} -- {1}".format("plot [data list]", "Plots data as line graph"))
         print("{0:20} -- {1}".format("plot [data list1] [data list2]", "Plots data as line graph"))
         print("{0:20} -- {1}".format("help", "Shows this list of commands"))
@@ -272,6 +285,7 @@ if __name__=="__main__":
             sys.exit()
 
     print("Opening results from " + folders[choice])
+    global firms, banks, individualFirm
     firms, banks, individualFirm, parameters = openSimulationFiles(folders[choice])
 
     while(True):
