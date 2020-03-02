@@ -22,6 +22,7 @@ class Simulation:
             cB=0.01, # banks costs
             mode=None, # mode to run simulation
             seed=None,
+            outputFolder=None
             ):
         self.time = int(time)
         self.numberOfFirms = int(numberOfFirms)
@@ -62,7 +63,17 @@ class Simulation:
         # contains banks that firms use as lookup for interestRates
         self.bankPools = np.zeros((self.numberOfFirms, self.chi))
 
-        self.resultFolder = "results/" + str(self.seed) + "/"
+        if not outputFolder:
+            self.outputFolder = "results/" + str(self.seed) + "/"
+        else:
+            if os.path.lexists(outputFolder):
+                raise ValueError("Output folder already exists")
+            self.outputFolder = outputFolder
+        if self.outputFolder[-1] != "/" and os.name == "posix":
+            self.outputFolder += "/"
+        elif self.outputFolder[-1] != "\\" and os.name == "nt":
+            self.outputFolder += "\\"
+
 
         # Output variables
         self.changeFB = np.array([0]*self.time, dtype=float)
@@ -292,14 +303,14 @@ class Simulation:
     def saveResults(self):
 
         try:
-            os.mkdir(self.resultFolder)
+            os.mkdir(self.outputFolder)
         except FileExistsError:
             print("Simulation with this seed exists")
             override = input("Overwrite results? [Y/n]: ")
             if "N" in override.upper() or ("N" in override.upper() and "Y" in override.upper()):
                 exit()
 
-        infoFile = open(self.resultFolder + "INFO", "+w")
+        infoFile = open(self.outputFolder + "INFO", "+w")
         infoFile.write("Simulation Configuration\n")
         infoFile.write("\t{0:35} = {1:5}\n".format("Seed", self.seed))
         date = time.strftime("%d %b %Y: %H:%M", time.gmtime())
@@ -328,7 +339,7 @@ class Simulation:
                 "Banks Aggregate Profit", "Total defaulted banks", \
                 "Economy GDP", "Average interest rate"]
 
-        f = open(self.resultFolder + "aggregateResults.csv", "w+")
+        f = open(self.outputFolder + "aggregateResults.csv", "w+")
 
         for name in columnNames:
             f.write(name+", ")
@@ -355,7 +366,7 @@ class Simulation:
                 "Defaulted", "Firm Interest Rate"]
 
         # Write results for special firm
-        f = open(self.resultFolder + "individualFirmResults.csv", "w+")
+        f = open(self.outputFolder + "individualFirmResults.csv", "w+")
         for name in columnNames:
             f.write(name+", ")
         f.write('\n')

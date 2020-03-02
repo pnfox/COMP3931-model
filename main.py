@@ -35,6 +35,8 @@ parser.add_argument("-i", "--interactive", required=False, default=False, \
         help="interactive mode - Useful for debugging")
 parser.add_argument("-s", "--seed", action='store', dest='seed', required=False, \
         help="Simulation seed")
+parser.add_argument("-o", "--output", action='store', dest='folder', required=False, \
+        default=None, help="Directory location where results are written")
 
 
 if __name__=="__main__":
@@ -55,6 +57,7 @@ if __name__=="__main__":
     beta = args.beta # production function parameter
     rCB = args.rCB # central bank interest rate
     cB = args.bankCost # banks costs
+    output = args.folder
 
     if(args.interactive):
         mode = "Interactive"
@@ -80,6 +83,7 @@ if __name__=="__main__":
                             rCB,
                             cB,
                             mode=mode,
-                            seed=seed)
+                            seed=seed,
+                            outputFolder=output)
     model.run()
     sys.exit() # terminate program
