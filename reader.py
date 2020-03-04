@@ -95,7 +95,7 @@ def classify(key):
         return
 
     fig, ax = plt.subplots()
-    numOfClasses = 3
+    numOfClasses = np.amax(Yclass)+1
     for i in range(numOfClasses):
         classRuns = np.where(Yclass == i)[0]
         classLabel = key+"="+str(Y[classRuns][0])
