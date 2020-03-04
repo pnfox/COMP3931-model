@@ -41,6 +41,25 @@ def plot(data, data2=None, data3=None, data4=None, title=""):
         print("Error plot: data must be passed to function")
         return
 
+def tempAnalysis():
+    y = firms.output
+    time = np.linspace(0, len(y), num=len(y)-1)
+    p = np.stack((time, y[1:]), axis=-1)
+    interpolatedPoints = analyse.splineData(p)
+    dy = np.gradient(interpolatedPoints[:,1])
+    stationaryPoints = analyse.findStationaryPoints(dy)
+    change = analyse.outputVolatility(firms)
+    changeColor = (change - np.amin(change)) / (np.amax(change) - np.amin(change))
+    changeColor = np.around(change, decimals=1)
+
+    fig, ax = plt.subplots(nrows=2,ncols=1)
+    ax[0].plot(p[:,0], p[:,1])
+    ax[0].scatter(interpolatedPoints[stationaryPoints,0], \
+            interpolatedPoints[stationaryPoints,1], c='r')
+    ax[0].set_ylim(0,np.amax(p[:,1]))
+    ax[1].bar(interpolatedPoints[stationaryPoints,0],change,linewidth=1000)
+    plt.show()
+
 def classify(key):
 
     if not key or type(key) != str:
@@ -91,7 +110,7 @@ def classify(key):
     try:
         classifier.fit(simulationRuns, Yclass)
     except ValueError:
-        print("Only one class found for {0:5}".format(key))
+        print("Simulations do not differ by parameter {0:5}".format(key))
         return
 
     fig, ax = plt.subplots()
@@ -233,6 +252,8 @@ def executeCommand(cmd):
         raise EOFError
     if cmd[0] == "find":
         print(findSimulations(cmd[1], cmd[2]))
+    if cmd[0] == "test":
+        tempAnalysis()
     if cmd[0] == "open":
         choice = selectResults(folders)
         if choice > len(folders) or choice < 0:

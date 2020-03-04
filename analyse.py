@@ -16,7 +16,7 @@ def splineData(data):
     y = data[:,1]
 
     # maybe try data.reshape((int(len(data)/3, 3))
-    d = 4 if len(y)%2 == 0 else 5
+    d = 2 if len(y)%2 == 0 else 3
     pointsY = y.reshape((int(len(y)/d), d))
     pointsX = x.reshape((int(len(x)/d), d))
     for i in pointsY:
@@ -59,7 +59,7 @@ def outputVolatility(firms):
 
     points = np.stack((time, firms.output[1:]), axis=-1)
     interpolatedPoints = splineData(points)
-    dy = np.gradient(np.gradient(interpolatedPoints[:,1]))
+    dy = np.gradient(interpolatedPoints[:,1])
     stationaryPoints = findStationaryPoints(dy)
 
     # calculate information about stationaryPoints
