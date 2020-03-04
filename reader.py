@@ -18,6 +18,9 @@ resultNames = {0: "Output", 1: "Capital",
             6 : "Default", 7: "Interest"}
 
 def plot(data, data2=None, data3=None, data4=None, title=""):
+
+    maxValue = -np.inf
+    minValue = 0
     fig, ax = plt.subplots()
     try:
         for i in [data, data2, data3, data4]:
@@ -25,9 +28,14 @@ def plot(data, data2=None, data3=None, data4=None, title=""):
                 continue
             if (type(i) is not list) and (type(i) is not np.ndarray):
                 raise ValueError("Error plot: data must be list")
+            if np.amax(i) > maxValue:
+                maxValue = np.amax(i)
+            if np.amin(i) < minValue:
+                minValue = np.amin(i)
             ax.plot(i)
         if title != "":
             ax.set_title(title)
+        plt.ylim(minValue, maxValue)
         fig.show()
     except NameError:
         print("Error plot: data must be passed to function")
