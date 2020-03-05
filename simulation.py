@@ -95,6 +95,7 @@ class Simulation:
 
         self.GDP = np.array([0]*self.time, dtype=float)
         self.avgInterest = np.array([0]*self.time, dtype=float)
+        self.leverage = np.array([0]*self.time, dtype=float)
 
     def findBestBank(self, potentialPartners):
         bestInterest = np.inf
@@ -299,6 +300,7 @@ class Simulation:
 
         self.GDP[time] = totalOutput
         self.avgInterest[time] = np.mean(self.banks.interestRate)
+        self.leverage[time] = self.firmDebtReport[time] / self.firmWealthReport[time]
 
     def saveResults(self):
 
@@ -337,7 +339,7 @@ class Simulation:
                 "Firms Aggregate Profit", "Total defaulted firms", \
                 "Banks Aggregate Wealth", "Banks Aggregate Debt", \
                 "Banks Aggregate Profit", "Total defaulted banks", \
-                "Economy GDP", "Average interest rate"]
+                "Economy GDP", "Average interest rate", "Economy Debt-Equity Ratio"]
 
         f = open(self.outputFolder + "aggregateResults.csv", "w+")
 
@@ -357,7 +359,8 @@ class Simulation:
                                 self.bankProfitReport,
                                 self.bankDefaultReport,
                                 self.GDP,
-                                self.avgInterest))
+                                self.avgInterest,
+                                self.leverage))
         np.savetxt(f, output.transpose(), delimiter=",")
         f.close()
 

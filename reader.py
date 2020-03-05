@@ -157,7 +157,7 @@ def openSimulationFiles(folder):
     banksKeys = ['Wealth', 'Debt',
             'Profit', 'Default']
 
-    economy = {"GDP": [], "Avg interest":[]}
+    economy = {"GDP": [], "Avg interest":[], "Debt-equity":[]}
     parameters = {"seed": [], "date": [], "steps": [], "firms": [], "banks": [], \
                 "mean": [], "variance": [], "gamma": [], "lambd": [], \
                 "adj": [], "phi": [], "beta": [], "rcb": [], "cb": []}
@@ -184,6 +184,7 @@ def openSimulationFiles(folder):
             banks.default = lines.transpose()[10]
             economy.get("GDP").append(lines.transpose()[11])
             economy.get("Avg interest").append(lines.transpose()[12])
+            economy.get("Debt-equity").append(lines.transpose()[13])
         with open(folder + "individualFirmResults.csv", "r") as f:
             reader = csv.reader(f)
             lines = np.array(list(reader)[300:], dtype=float)
@@ -259,14 +260,14 @@ def executeCommand(cmd):
         if choice > len(folders) or choice < 0:
             return
         print("Opening results from " + folders[choice])
-        global firms, banks, individualFirm
+        global firms, banks, individualFirm, parameters
         firms, banks, individualFirm, parameters = openSimulationFiles(folders[choice])
 
     if cmd[0] == "plot":
 
         for i in cmd[1:]:
             if (not i.startswith("firms")) and (not i.startswith("banks")) \
-                    and (not i.startswith("individual")):
+                    and (not i.startswith("individual")) and (not i.startswith("economy")):
                 print("Invalid argument: ", i)
                 continue
             else:
@@ -316,7 +317,7 @@ if __name__=="__main__":
             sys.exit()
 
     print("Opening results from " + folders[choice])
-    global firms, banks, individualFirm
+    global firms, banks, individualFirm, parameters
     firms, banks, individualFirm, parameters = openSimulationFiles(folders[choice])
 
     while(True):
