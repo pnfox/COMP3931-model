@@ -60,6 +60,9 @@ def tempAnalysis():
     ax[1].bar(interpolatedPoints[stationaryPoints,0],change,linewidth=1000)
     plt.show()
 
+    plt(np.log(firms.output))
+    plt.show()
+
 def classify(key):
 
     if not key or type(key) != str:
@@ -68,7 +71,7 @@ def classify(key):
     simulationRuns = np.array([])
     Y = np.array([])
     for folder in glob.glob("results/*/"):
-        firms, banks, individualFirm, paramters = openSimulationFiles(folder)
+        firms, banks, individualfirm, paramters = openSimulationFiles(folder)
 
         time = np.linspace(0, len(firms.output), num=len(firms.output)-1)
         p = np.stack((time, firms.output[1:]), axis=-1)
@@ -134,7 +137,7 @@ def findSimulations(key, value):
 
     sims = np.array([])
     for folder in glob.glob("results/*/"):
-        firms, banks, individualFirm, parameters = openSimulationFiles(folder)
+        firms, banks, individuafirm, parameters = openSimulationFiles(folder)
 
         if parameters.get(key) == value:
             sims = np.append(sims, folder)
@@ -153,7 +156,8 @@ def openSimulationFiles(folder):
     individualFirmKeys = ['Output', 'Capital',
             'Price', 'Wealth',
             'Debt', 'Profit',
-            'Default','Interest']
+            'Default','Interest',
+            'Leverage']
     banksKeys = ['Wealth', 'Debt',
             'Profit', 'Default']
 
@@ -164,7 +168,7 @@ def openSimulationFiles(folder):
 
     firms = agents.Firms()
     banks = agents.Banks()
-    individualFirm = agents.IndividualFirm()
+    individualfirm = agents.IndividualFirm()
 
     try:
         with open(folder + "aggregateResults.csv", "r") as f:
@@ -188,14 +192,15 @@ def openSimulationFiles(folder):
         with open(folder + "individualFirmResults.csv", "r") as f:
             reader = csv.reader(f)
             lines = np.array(list(reader)[300:], dtype=float)
-            individualFirm.output = lines.transpose()[0]
-            individualFirm.capital = lines.transpose()[1]
-            individualFirm.price = lines.transpose()[2]
-            individualFirm.networth = lines.transpose()[3]
-            individualFirm.debt = lines.transpose()[4]
-            individualFirm.profit = lines.transpose()[5]
-            individualFirm.default = lines.transpose()[6]
-            individualFirm.interest = lines.transpose()[7]
+            individualfirm.output = lines.transpose()[0]
+            individualfirm.capital = lines.transpose()[1]
+            individualfirm.price = lines.transpose()[2]
+            individualfirm.networth = lines.transpose()[3]
+            individualfirm.debt = lines.transpose()[4]
+            individualfirm.profit = lines.transpose()[5]
+            individualfirm.default = lines.transpose()[6]
+            individualfirm.interest = lines.transpose()[7]
+            individualfirm.leverage = lines.transpose()[8]
         with open(folder + "INFO", "r") as f:
             lines = list(f)
             index = 0
@@ -211,7 +216,7 @@ def openSimulationFiles(folder):
         print("No file found")
         exit()
 
-    return firms, banks, individualFirm, parameters
+    return firms, banks, individualfirm, parameters
 
 def selectResults(files):
     choice = 0
@@ -260,8 +265,8 @@ def executeCommand(cmd):
         if choice > len(folders) or choice < 0:
             return
         print("Opening results from " + folders[choice])
-        global firms, banks, individualFirm, parameters
-        firms, banks, individualFirm, parameters = openSimulationFiles(folders[choice])
+        global firms, banks, individualfirm, parameters
+        firms, banks, individualfirm, parameters = openSimulationFiles(folders[choice])
 
     if cmd[0] == "plot":
 
@@ -286,7 +291,7 @@ def executeCommand(cmd):
         print("{0:20} -- {1}".format("plot [data list1] [data list2]", "Plots data as line graph"))
         print("{0:20} -- {1}".format("help", "Shows this list of commands"))
     if cmd[0] == "list":
-        print("\nVariables: {0:5}, {1:5}, {1:5}\n".format("firms", "individualFirm", "banks"))
+        print("\nVariables: {0:5}, {1:5}, {1:5}\n".format("firms", "individualfirm", "banks"))
         print("Firms attributes:")
         print("\t{0:20} {1:20}".format("price", "debt"))
         print("\t{0:20} {1:20}".format("networth", "profit"))
@@ -317,8 +322,8 @@ if __name__=="__main__":
             sys.exit()
 
     print("Opening results from " + folders[choice])
-    global firms, banks, individualFirm, parameters
-    firms, banks, individualFirm, parameters = openSimulationFiles(folders[choice])
+    global firms, banks, individualfirm, parameters
+    firms, banks, individualfirm, parameters = openSimulationFiles(folders[choice])
 
     while(True):
         try:

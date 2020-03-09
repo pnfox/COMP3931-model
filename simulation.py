@@ -76,7 +76,7 @@ class Simulation:
 
 
         # Output variables
-        self.changeFB = np.array([0]*self.time, dtype=float)
+        self.changeFB = np.array([0]*self.time, dtype=float) # monitors how many firms change bank
         self.firmOutputReport = np.array([0]*self.time, dtype=float)
         self.firmCapitalReport = np.array([0]*self.time, dtype=float)
         self.firmWealthReport = np.array([0]*self.time, dtype=float)
@@ -86,7 +86,7 @@ class Simulation:
         self.firmDefaultReport = np.array([0]*self.time, dtype=float)
 
         # array to store price, wealth, capital,... from a single firm
-        self.individualFirm = np.array([[0,0,0,0,0,0,0,0]], dtype=float)
+        self.individualFirm = np.array([[0,0,0,0,0,0,0,0,0]], dtype=float)
 
         self.bankWealthReport = np.array([0]*self.time, dtype=float)
         self.bankDebtReport = np.array([0]*self.time, dtype=float)
@@ -112,23 +112,23 @@ class Simulation:
         self.bankPools = np.ceil(np.random.uniform(0, self.numberOfBanks-1, \
                             self.chi*self.numberOfFirms).reshape(self.numberOfFirms, self.chi))
         for f in range(self.numberOfFirms):
-            # select potential partners, this is newFallBack
+            # select potential partners
             potentialPartners = self.bankPools[f]
 
-            # select best bank
+            # select best bank out of potentia partners
             bestBankIndex = self.findBestBank(potentialPartners)
             newInterest = self.banks.interestRate[bestBankIndex]
 
             # pick up interest of old partner
-            currentBank = np.nonzero(self.link_fb[f])
-            if not currentBank[0]:
+            currentBank = np.nonzero(self.link_fb[f])[0]
+            if not currentBank:
                 oldInterest = np.inf
             else:
-                oldInterest = self.banks.interestRate[currentBank[0][0]]
+                oldInterest = self.banks.interestRate[currentBank[0]]
 
-            #compare old and new
+            # compare old bank with new
             if (newInterest < oldInterest):
-                #switch
+                # log change in firm-bank relationship
                 self.changeFB[time] = self.changeFB[time] + 1
 
                 # update link
@@ -288,7 +288,7 @@ class Simulation:
         firmsResults = []
         for i in [self.firms.output, self.firms.capital, self.firms.price,
                     self.firms.networth, self.firms.debt, self.firms.profit,
-                    self.firms.default, self.firms.interestRate]:
+                    self.firms.default, self.firms.interestRate, self.firms.leverage]:
                 firmsResults.append(i[-1])
         self.individualFirm = np.concatenate((self.individualFirm, np.array([firmsResults])))
 
@@ -366,7 +366,7 @@ class Simulation:
 
         columnNames = ["Firm Output", "Firm Capital", "Firm Price", \
                 "Firm Networth", "Firm Debt", "Firm Profit", \
-                "Defaulted", "Firm Interest Rate"]
+                "Defaulted", "Firm Interest Rate", "Firm Leverage"]
 
         # Write results for special firm
         f = open(self.outputFolder + "individualFirmResults.csv", "w+")
