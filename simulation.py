@@ -54,6 +54,7 @@ class Simulation:
         self.banks = agents.Banks(self.numberOfBanks)
 
         # firms-banks credit matching adjacency matrix
+        # firms borrow from 1 bank but banks have multiple clients
         self.link_fb = np.zeros((self.numberOfFirms, self.numberOfBanks))
         banksWithFirms = np.ceil(np.random.uniform(0, self.numberOfBanks-1, self.numberOfFirms))
         for i in range(self.numberOfFirms):
