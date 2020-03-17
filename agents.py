@@ -8,7 +8,7 @@ class Firms:
                 varpf=0.4 # variance of firms price
                 ):
         self.numberOfFirms = numberOfFirms
-        self.price = np.random.normal(alpha, varpf**2, size=numberOfFirms)
+        self.price = np.random.normal(alpha, np.sqrt(varpf), size=numberOfFirms)
         self.debt = np.zeros(numberOfFirms)
         self.networth = np.full_like(np.arange(numberOfFirms), 10, dtype=float)
         self.profit = np.zeros(numberOfFirms, dtype=float)
@@ -50,3 +50,15 @@ class Banks:
 
     def isDefaulted(self):
         return np.bool(self.default[i])
+
+class Economy:
+
+    def __init__(self,
+                time):
+        if time is None:
+            raise ValueError("Must provide economy with number of time steps")
+
+        self.time = time
+        self.GDP = np.array([0]*self.time, dtype=float)
+        self.avgInterest = np.array([0]*self.time, dtype=float)
+        self.leverage = np.array([0]*self.time, dtype=float)

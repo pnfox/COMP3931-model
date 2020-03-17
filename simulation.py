@@ -50,8 +50,8 @@ class Simulation:
         np.random.seed(self.seed)
 
         self.firms = agents.Firms(self.numberOfFirms, self.alpha, self.varpf)
-
         self.banks = agents.Banks(self.numberOfBanks)
+        self.economy = agents.Economy(self.time)
 
         # firms-banks credit matching adjacency matrix
         # firms borrow from 1 bank but banks have multiple clients
@@ -93,10 +93,6 @@ class Simulation:
         self.bankDebtReport = np.array([0]*self.time, dtype=float)
         self.bankProfitReport = np.array([0]*self.time, dtype=float)
         self.bankDefaultReport = np.array([0]*self.time, dtype=float)
-
-        self.GDP = np.array([0]*self.time, dtype=float)
-        self.avgInterest = np.array([0]*self.time, dtype=float)
-        self.leverage = np.array([0]*self.time, dtype=float)
 
     def findBestBank(self, potentialPartners):
         bestInterest = np.inf
@@ -220,7 +216,7 @@ class Simulation:
         self.firms.output = self.phi * np.float_power(self.firms.capital, self.beta)
 
     def updateFirmPrice(self):
-        self.firms.price = np.random.normal(self.alpha, self.varpf**2, size=self.numberOfFirms)
+        self.firms.price = np.random.normal(self.alpha, np.sqrt(self.varpf), size=self.numberOfFirms)
 
     def updateFirmInterestRate(self):
         for f in range(self.numberOfFirms):
@@ -299,9 +295,9 @@ class Simulation:
         self.bankProfitReport[time] = np.sum(self.banks.profit)
         self.bankDefaultReport[time] = np.count_nonzero(self.banks.default)
 
-        self.GDP[time] = totalOutput
-        self.avgInterest[time] = np.mean(self.banks.interestRate)
-        self.leverage[time] = self.firmDebtReport[time] / self.firmWealthReport[time]
+        self.economy.GDP[time] = totalOutput
+        self.economy.avgInterest[time] = np.mean(self.banks.interestRate)
+        self.economy.leverage[time] = self.firmDebtReport[time] / self.firmWealthReport[time]
 
     def saveResults(self):
 
@@ -359,9 +355,9 @@ class Simulation:
                                 self.bankDebtReport,
                                 self.bankProfitReport,
                                 self.bankDefaultReport,
-                                self.GDP,
-                                self.avgInterest,
-                                self.leverage))
+                                self.economy.GDP,
+                                self.economy.avgInterest,
+                                self.economy.leverage))
         np.savetxt(f, output.transpose(), delimiter=",")
         f.close()
 
