@@ -3,6 +3,8 @@ import os
 import agents
 import sys
 import time
+from scipy import stats
+import matplotlib.pyplot as plt
 
 class Simulation:
 
@@ -310,7 +312,7 @@ class Simulation:
                 exit()
 
         infoFile = open(self.outputFolder + "INFO", "+w")
-        infoFile.write("Simulation Configuration\n")
+        infoFile.write("### Simulation Configuration ###\n")
         infoFile.write("\t{0:35} = {1:5}\n".format("Seed", self.seed))
         date = time.strftime("%d %b %Y: %H:%M", time.gmtime())
         infoFile.write("\t{0:35} = {1:5}\n".format("Date ran", date))
@@ -326,7 +328,19 @@ class Simulation:
         infoFile.write("\t{0:35} = {1:5}\n".format("Production function param (phi)", self.phi))
         infoFile.write("\t{0:35} = {1:5}\n".format("Production function param (beta)", self.beta))
         infoFile.write("\t{0:35} = {1:5}\n".format("Central bank interest rate (rCB)", self.rCB))
-        infoFile.write("\t{0:35} = {1:5}\n".format("Bank costs (cB)", self.cB))
+        infoFile.write("\t{0:35} = {1:5}\n\n".format("Bank costs (cB)", self.cB))
+
+        infoFile.write("### Quick Analysis ###\n")
+        infoFile.write("{0:20} = {1:5}".format("Mean leverage", np.mean(self.economy.leverage)))
+        infoFile.write("{0:20} = {1:5}".format("Mean firm default", np.mean(self.firms.default)))
+        infoFile.write("{0:20} = {1:5}".format("Mean banks default", np.mean(self.banks.default)))
+
+        # Report simulation fails
+        if np.all(self.firms.price == 0):
+            infoFile.write("Warning: Firm price error\n")
+        if np.all(self.economy.leverage == 0):
+            infoFile.write("Warning: Economy leverage error\n")
+
         infoFile.close()
 
         print("Writing simulation results with seed " + str(self.seed))
@@ -410,7 +424,8 @@ class Simulation:
 
         def printVar(self, args):
             try:
-                if (not args[0].startswith("firms.")) and (not args[0].startswith("banks.")):
+                if (not args[0].startswith("firms.")) and (not args[0].startswith("banks."))\
+                        and (not args[0].startswith("economy.")):
                     raise ValueError
                 exec("print(self." + args[0] + ")")
             except (ValueError, IndexError):
@@ -458,6 +473,8 @@ class Simulation:
 
     def run(self):
         print("Running Simulation...")
+        p = []
+        d = []
         for t in range(self.time):
             self.currentStep = t
             # replace defaulted firms and banks
@@ -515,5 +532,28 @@ class Simulation:
                 print("Time: ", t)
                 self.interactiveShell()
 
+            if t > 300 and t%2 == 0:
+                data = self.firms.networth[self.firms.networth > 0]
+                MLE = stats.genpareto.fit(data)
+                dvalue, pvalue = stats.kstest(data, 'genpareto', args=MLE)
+                p.append(pvalue)
+                d.append(dvalue)
+
         self.saveResults()
 
+        #
+        # Check firm wealth follows power law
+        #
+        data = self.firms.networth[self.firms.networth > 0]
+        c_alpha = 1.22
+        n = len(data)
+        criticalValue = c_alpha * np.sqrt(2/n)
+        infoFile = open(self.outputFolder + "INFO", "a")
+        infoFile.write("\t{0:35} = {1:5}\n".format("Average p-value:", np.mean(p)))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Average D-value:", np.mean(d)))
+        infoFile.write("\t{0:35} = {1:5}\n".format("Critical Value:", criticalValue))
+        if np.mean(d) > criticalValue:
+            infoFile.write("Null hypothesis rejected!!!\n")
+            infoFile.write("Distributions are similar!!!\n")
+            print("Distributions are similar!!!")
+        infoFile.close()
