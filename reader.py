@@ -11,6 +11,8 @@ from sklearn.svm import SVC
 from sklearn import preprocessing
 import agents
 import analyse
+from scipy.interpolate import splev, splrep
+from scipy import stats
 
 resultNames = {0: "Output", 1: "Capital",
             2 : "Price", 3 : "Wealth",
@@ -43,27 +45,44 @@ def plot(data, data2=None, data3=None, data4=None, title=""):
 
 def tempAnalysis():
     y = firms.output
-    time = np.linspace(0, len(y), num=len(y)-1)
-    p = np.stack((time, y[1:]), axis=-1)
-    interpolatedPoints = analyse.splineData(p)
-    dy = np.gradient(interpolatedPoints[:,1])
-    stationaryPoints = analyse.findStationaryPoints(dy)
-    change = analyse.outputVolatility(firms)
-    changeColor = (change - np.amin(change)) / (np.amax(change) - np.amin(change))
-    changeColor = np.around(change, decimals=1)
+    time = np.linspace(0, len(y), num=len(y))
 
-    fig, ax = plt.subplots(nrows=2,ncols=1)
-    ax[0].plot(p[:,0], p[:,1])
-    ax[0].scatter(interpolatedPoints[stationaryPoints,0], \
-            interpolatedPoints[stationaryPoints,1], c='r')
-    ax[0].set_ylim(0,np.amax(p[:,1]))
-    ax[1].bar(interpolatedPoints[stationaryPoints,0],change,linewidth=1000)
+    spline = splrep(time, y, k=1)
+    spline2 = splrep(time, y, k=1, s=10)
+    x = np.linspace(0, len(y), 40)
+    y2 = splev(x, spline)
+    y3 = splev(x, spline2)
+
+    plt.plot(y, label='Firm output')
+    plt.plot(x, y2, label='splines')
+    plt.plot(x, y3, '-', label='splines')
+    plt.legend()
     plt.show()
 
-    plt.xcorr(economy.leverage, firms.output, maxlags=30)
-    plt.show()
+    a = 200
+    b = 230
 
-    plt.plot(firms.default)
+    print("Covariance matrix")
+    cov = np.cov(firms.networth[0:1000], economy.leverage[0:1000])
+    print(cov)
+
+    print("Pearson correlation coefficients")
+    print(np.corrcoef(firms.networth[0:1000], economy.leverage[0:1000]))
+
+    pearson = []
+    index = a
+    x = []
+    for i in range(len(y)-b):
+        p = stats.pearsonr(firms.networth[a+i:b+i], \
+            economy.leverage[a+i:b+i])
+        if p[1] < 0.05:
+            pearson.append(p[0])
+            x.append(index)
+        index += 1
+
+    plt.plot(x,pearson)
+    plt.title("Pearson correlation")
+    plt.grid(True)
     plt.show()
 
 def classify(key):
@@ -209,7 +228,8 @@ def openSimulationFiles(folder):
             index = 0
             for line in lines:
                 line = line.lower().split()
-                value = line[-1]
+                if line:
+                    value = line[-1]
                 for key in parameters.keys():
                     for word in line:
                         if re.match('.*'+key+'.*', word):
@@ -246,7 +266,6 @@ def selectResults(files):
     return choice
 
 def executeCommand(cmd):
-    cmd = cmd.lower()
     cmd = cmd.split(" ")
 
     args = ""
@@ -284,6 +303,11 @@ def executeCommand(cmd):
             return
         # if we get here cmd is valid
         exec(cmd[0] + "(" + args + ")")
+
+    if cmd[0] == "printparams" or cmd[0] == "params":
+        for x in parameters:
+            print ("{0:20}: {1:10}".format(x,parameters[x]))
+        
     if cmd[0] == "help":
         print("List of commands:\n")
         print("{0:20} -- {1}".format("exec [python code]", "USE WITH CARE"))
@@ -292,6 +316,7 @@ def executeCommand(cmd):
         print("{0:20} -- {1}".format("open", "Open simulation files for analysis"))
         print("{0:20} -- {1}".format("plot [data list]", "Plots data as line graph"))
         print("{0:20} -- {1}".format("plot [data list1] [data list2]", "Plots data as line graph"))
+        print("{0:20} -- {1}".format("params/printparams", "Print simulation parameters"))
         print("{0:20} -- {1}".format("help", "Shows this list of commands"))
     if cmd[0] == "list":
         print("\nVariables: {0:5}, {1:5}, {1:5}, {1:5}\n".format("firms", "individualfirm", "banks", "economy"))
@@ -334,7 +359,7 @@ if __name__=="__main__":
 
     while(True):
         try:
-            shellCommand = str(input(">>> ")).lower()
+            shellCommand = str(input(">>> "))
             executeCommand(shellCommand)
         except EOFError:
             print("Exiting reader")
