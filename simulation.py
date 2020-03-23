@@ -182,7 +182,7 @@ class Simulation:
             self.link_fb[i][int(banks[j])] = 1
             j += 1
 
-        # update firm variables
+        # create new firms
         self.firms.networth[defaulted] = np.random.uniform(2, size=len(defaulted))
         self.firms.leverage[defaulted] = 1
         self.firms.price[defaulted] = np.random.normal(self.alpha, np.sqrt(self.varpf), size=len(defaulted))
@@ -298,6 +298,7 @@ class Simulation:
         self.bankDefaultReport[time] = np.count_nonzero(self.banks.default)
 
         self.economy.GDP[time] = totalOutput
+        self.economy.badDebtAsGDP[time] = np.mean(self.banks.badDebt*100 / totalOutput)
         self.economy.avgInterest[time] = np.mean(self.banks.interestRate)
         self.economy.leverage[time] = self.firmDebtReport[time] / self.firmWealthReport[time]
 
@@ -331,15 +332,19 @@ class Simulation:
         infoFile.write("\t{0:35} = {1:5}\n\n".format("Bank costs (cB)", self.cB))
 
         infoFile.write("### Quick Analysis ###\n")
-        infoFile.write("{0:20} = {1:5}".format("Mean leverage", np.mean(self.economy.leverage)))
-        infoFile.write("{0:20} = {1:5}".format("Mean firm default", np.mean(self.firms.default)))
-        infoFile.write("{0:20} = {1:5}".format("Mean banks default", np.mean(self.banks.default)))
+        infoFile.write("{0:20} = {1:5}\n".format("Mean leverage", np.mean(self.economy.leverage[300:])))
+        infoFile.write("{0:20} = {1:5}\n".format("Mean firm default", np.mean(self.firmDefaultReport)))
+        infoFile.write("{0:20} = {1:5}\n".format("Mean banks default", np.mean(self.bankDefaultReport)))
+        infoFile.write("{0:20} = {1:5}\n".format("Mean percentage GDP as non-performing loans", \
+                np.mean(self.economy.badDebtAsGDP[300:])))
 
         # Report simulation fails
         if np.all(self.firms.price == 0):
             infoFile.write("Warning: Firm price error\n")
         if np.all(self.economy.leverage == 0):
             infoFile.write("Warning: Economy leverage error\n")
+        if np.mean(self.economy.badDebtAsGDP[300:]) > 3:
+            infoFile.write("Warning: High Bad Debt\n")
 
         infoFile.close()
 
@@ -545,15 +550,12 @@ class Simulation:
         # Check firm wealth follows power law
         #
         data = self.firms.networth[self.firms.networth > 0]
-        c_alpha = 1.22
-        n = len(data)
-        criticalValue = c_alpha * np.sqrt(2/n)
         infoFile = open(self.outputFolder + "INFO", "a")
-        infoFile.write("\t{0:35} = {1:5}\n".format("Average p-value:", np.mean(p)))
-        infoFile.write("\t{0:35} = {1:5}\n".format("Average D-value:", np.mean(d)))
-        infoFile.write("\t{0:35} = {1:5}\n".format("Critical Value:", criticalValue))
-        if np.mean(d) > criticalValue:
-            infoFile.write("Null hypothesis rejected!!!\n")
-            infoFile.write("Distributions are similar!!!\n")
-            print("Distributions are similar!!!")
+        criticalValue = 1.36 / np.sqrt(len(data))
+        infoFile.write("KS test: " + str(np.mean(d)) + ", " + str(np.mean(p)) + "\n")
+        infoFile.write("Critical Value 95% confidence: " + str(criticalValue) + "\n")
+        if np.mean(d) < criticalValue:
+            infoFile.write("Firm networth Follows pareto distribution\n")
+        else:
+            infoFile.write("Rejected null hypothesis - not pareto distribution\n")
         infoFile.close()

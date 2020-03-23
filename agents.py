@@ -60,5 +60,6 @@ class Economy:
 
         self.time = time
         self.GDP = np.array([0]*self.time, dtype=float)
+        self.badDebtAsGDP = np.array([0]*self.time, dtype=float)
         self.avgInterest = np.array([0]*self.time, dtype=float)
         self.leverage = np.array([0]*self.time, dtype=float)
