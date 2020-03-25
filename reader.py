@@ -43,46 +43,43 @@ def plot(data, data2=None, data3=None, data4=None, title=""):
         print("Error plot: data must be passed to function")
         return
 
+def pearCoeffs(x,y, stepsize):
+    index = 0
+    pearson = []
+    domain = []
+    for i in range(len(y)-stepsize):
+        p = stats.pearsonr(x[i:stepsize+i], y[i:stepsize+i])
+        if p[1] < 0.2:
+            pearson.append(p[0])
+            domain.append(index)
+        index += 1
+
+    return domain, pearson
+
 def tempAnalysis():
     y = firms.output
     time = np.linspace(0, len(y), num=len(y))
 
-    spline = splrep(time, y, k=1)
-    spline2 = splrep(time, y, k=1, s=10)
-    x = np.linspace(0, len(y), 40)
+    spline = splrep(time, y, k=3, s=25)
+    x = np.linspace(0, len(y), int(len(y)/6))
     y2 = splev(x, spline)
-    y3 = splev(x, spline2)
 
     plt.plot(y, label='Firm output')
     plt.plot(x, y2, label='splines')
-    plt.plot(x, y3, '-', label='splines')
     plt.legend()
+    plt.grid(True)
     plt.show()
 
-    a = 200
-    b = 230
 
-    print("Covariance matrix")
-    cov = np.cov(firms.networth[0:1000], economy.leverage[0:1000])
-    print(cov)
-
-    print("Pearson correlation coefficients")
-    print(np.corrcoef(firms.networth[0:1000], economy.leverage[0:1000]))
-
-    pearson = []
-    index = a
-    x = []
-    for i in range(len(y)-b):
-        p = stats.pearsonr(firms.networth[a+i:b+i], \
-            economy.leverage[a+i:b+i])
-        if p[1] < 0.05:
-            pearson.append(p[0])
-            x.append(index)
-        index += 1
-
-    plt.plot(x,pearson)
-    plt.title("Pearson correlation")
-    plt.grid(True)
+    fig, ax = plt.subplots(2,1, sharex=True)
+    ax[0].plot(x, y2, label='splines')
+    ax[0].legend()
+    ax[0].grid(True)
+    x, pearson = pearCoeffs(economy.badDebtAsGDP, economy.leverage, 15)
+    ax[1].scatter(x,pearson)
+    ax[1].set_ylim(-1,1)
+    ax[1].grid(True)
+    ax[1].set_title("Pearson correlation")
     plt.show()
 
 def classify(key):
@@ -209,8 +206,9 @@ def openSimulationFiles(folder):
             banks.profit = lines.transpose()[9]
             banks.default = lines.transpose()[10]
             economy.GDP = lines.transpose()[11]
-            economy.avgInterest = lines.transpose()[12]
-            economy.leverage = lines.transpose()[13]
+            economy.badDebtAsGDP = lines.transpose()[12]
+            economy.avgInterest = lines.transpose()[13]
+            economy.leverage = lines.transpose()[14]
         with open(folder + "individualFirmResults.csv", "r") as f:
             reader = csv.reader(f)
             lines = np.array(list(reader)[300:], dtype=float)

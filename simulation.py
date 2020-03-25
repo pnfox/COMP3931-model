@@ -375,6 +375,7 @@ class Simulation:
                                 self.bankProfitReport,
                                 self.bankDefaultReport,
                                 self.economy.GDP,
+                                self.economy.badDebtAsGDP,
                                 self.economy.avgInterest,
                                 self.economy.leverage))
         np.savetxt(f, output.transpose(), delimiter=",")
