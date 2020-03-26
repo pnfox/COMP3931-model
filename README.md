@@ -68,3 +68,14 @@ optional arguments:
                         Directory location where results are written
 ```
 
+### Dependencies
+
+* [Numpy](https://numpy.org)
+
+* [Scipy](https://www.scipy.org)
+
+* [Matplotlib](https://matplotlib.org/)
+
+### License
+
+This project is licensed under the GNU GPLv3 Lincense - see [LICENSE.md](LICENSE.md)
