@@ -6,9 +6,6 @@ import re
 import numpy as np
 from matplotlib import colors
 import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
-from sklearn.svm import SVC
-from sklearn import preprocessing
 import agents
 import analyse
 from scipy.interpolate import splev, splrep
