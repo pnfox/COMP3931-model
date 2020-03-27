@@ -31,7 +31,14 @@ Note: Python >= 3.5 is required, use `virtualenv` to create a python enviroment
 with an appropiate version by running `virtualenv -p PYTHON_EXE DEST_DIR` to use
 to the correct python version.
 
-Running a simulation is done via the `main.py` script.
+Running a simulation is done via the `main.py` script. Using the following command
+will run a simulation for 1000 steps, 500 firms and 50 banks.
+
+`python main.py -t 1000 -f 500 -b 50`
+
+By default results will be saved into a subdirectory of `results/`
+
+For advanced configuration we can use the following options:
 
 ```
 usage: main.py [-h] -t SIMULATIONSTEPS -f FIRMS -b BANKS [-alpha PRICEMEAN]
@@ -68,13 +75,24 @@ optional arguments:
                         Directory location where results are written
 ```
 
+Analysis tools are provided by the `reader.py` script.
+This will search for saved simulations in the `results/` directory.
+Simply run the following to launch these tools:
+
+```python reader.py```
+
+This will bring us into the analysis shell, run `help` in here to see
+what commands are available.
+
 ### Dependencies
 
-* [Numpy](https://numpy.org)
+* [Python 3.5+](https://www.python.org/) - Programming language
 
-* [Scipy](https://www.scipy.org)
+* [Numpy](https://numpy.org) - Makes data computation easier
 
-* [Matplotlib](https://matplotlib.org/)
+* [Scipy](https://www.scipy.org) - Used for analysis
+
+* [Matplotlib](https://matplotlib.org/) - Used for plotting results
 
 ### License
 
