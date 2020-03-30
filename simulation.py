@@ -187,7 +187,7 @@ class Simulation:
         self.firms.leverage[defaulted] = 1
         self.firms.price[defaulted] = np.random.normal(self.alpha, np.sqrt(self.varpf), size=len(defaulted))
         self.firms.interestRate[defaulted] = self.rCB + self.banks.interestRate[ \
-                np.nonzero(self.link_fb[defaulted])[0][0]] + self.gamma * \
+                np.nonzero(self.link_fb[defaulted])[1]] + self.gamma * \
                 (self.firms.leverage[defaulted] / ((1+self.firms.networth[defaulted] / maxFirmWealth)))
         self.firms.default[defaulted] = 0
 
