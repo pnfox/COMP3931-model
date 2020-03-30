@@ -247,11 +247,8 @@ class Simulation:
         firmsPriceGreaterInterest = []
         firmsPriceLessInterest = []
 
-        for i in range(self.numberOfFirms):
-            if self.firms.price[i] > self.firms.interestRate[i]:
-                firmsPriceGreaterInterest.append(i)
-            else:
-                firmsPriceLessInterest.append(i)
+        firmsPriceGreaterInterest = np.where(self.firms.price > self.firms.interestRate)
+        firmsPriceLessInterest = np.where(self.firms.price <= self.firms.interestRate)
 
         self.firms.leverage[firmsPriceGreaterInterest] = \
                 self.firms.leverage[firmsPriceGreaterInterest] * \
