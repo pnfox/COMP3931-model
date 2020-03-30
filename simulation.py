@@ -221,11 +221,11 @@ class Simulation:
         self.firms.price = np.random.normal(self.alpha, np.sqrt(self.varpf), size=self.numberOfFirms)
 
     def updateFirmInterestRate(self):
+        bestFirmWorth = self.maxFirmWealth()
         for f in range(self.numberOfFirms):
             # interest of bank that firm uses
             currentBank = np.nonzero(self.link_fb[f])[0]
             bankInterest = self.banks.interestRate[currentBank[0]]
-            bestFirmWorth = self.maxFirmWealth()
             self.firms.interestRate[f] = self.rCB + bankInterest + \
                              self.gamma*(self.firms.leverage[f]) / \
                              ((1+self.firms.networth[f]/bestFirmWorth))
