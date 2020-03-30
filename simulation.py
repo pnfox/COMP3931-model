@@ -222,13 +222,10 @@ class Simulation:
 
     def updateFirmInterestRate(self):
         bestFirmWorth = self.maxFirmWealth()
-        for f in range(self.numberOfFirms):
-            # interest of bank that firm uses
-            currentBank = np.nonzero(self.link_fb[f])[0]
-            bankInterest = self.banks.interestRate[currentBank[0]]
-            self.firms.interestRate[f] = self.rCB + bankInterest + \
-                             self.gamma*(self.firms.leverage[f]) / \
-                             ((1+self.firms.networth[f]/bestFirmWorth))
+        banksOfFirms = np.nonzero(self.link_fb)[1]
+        self.firms.interestRate = self.rCB + self.banks.interestRate[banksOfFirms] + \
+                             self.gamma*(self.firms.leverage) / \
+                             ((1+self.firms.networth/bestFirmWorth))
         
     def updateFirmProfit(self):
         self.firms.profit = self.firms.price * self.firms.output - self.firms.interestRate * self.firms.debt
