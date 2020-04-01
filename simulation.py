@@ -3,6 +3,8 @@ import os
 import agents
 import sys
 import time
+from scipy import stats
+import matplotlib.pyplot as plt
 
 class Simulation:
 
@@ -10,50 +12,52 @@ class Simulation:
             time, # time simulation is ran for
             numberOfFirms,
             numberOfBanks,
-            alpha, # mean of firms price
-            varpf, # variance of firms price
-            gamma, # interest rate parameter
-            chi, # number of potential partners on credit market
-            lambd, # intensity of choice
-            adj, # leverage adjustment
-            phi, # production function parameter
-            beta, # production function parameter
-            rCB, # central bank interest rate
-            cB, # banks costs
+            alpha=0.1, # mean of firms price
+            varpf=0.4, # variance of firms price
+            gamma=0.02, # interest rate parameter
+            chi=5, # number of potential partners on credit market
+            lambd=4, # intensity of choice
+            adj=0.1, # leverage adjustment
+            phi=3, # production function parameter
+            beta=0.7, # production function parameter
+            rCB=0.02, # central bank interest rate
+            cB=0.01, # banks costs
             mode=None, # mode to run simulation
             seed=None,
+            outputFolder=None
             ):
-        self.time = time
-        self.numberOfFirms = numberOfFirms
-        self.numberOfBanks = numberOfBanks
-        self.alpha = alpha
-        self.varpf = varpf
-        self.gamma = gamma
-        self.chi = chi
-        self.lambd = lambd
-        self.adj = adj
-        self.phi = phi
-        self.beta = beta
-        self.rCB = rCB
-        self.cB = cB
+        self.time = int(time)
+        self.numberOfFirms = int(numberOfFirms)
+        self.numberOfBanks = int(numberOfBanks)
+        self.alpha = float(alpha)
+        self.varpf = float(varpf)
+        self.gamma = float(gamma)
+        self.chi = int(chi)
+        self.lambd = float(lambd)
+        self.adj = float(adj)
+        self.phi = float(phi)
+        self.beta = float(beta)
+        self.rCB = float(rCB)
+        self.cB = float(cB)
         self.bestFirm = 0
 
         self.mode = mode
         self.continueUntilTime = 0
 
         if seed == None:
-            self.seed = np.random.randint(9000)
+            self.seed = np.random.randint(900000)
         else:
-            self.seed = seed
+            self.seed = int(seed)
 
         np.random.seed(self.seed)
 
-        self.firms = agents.Firms(numberOfFirms, self.alpha, self.varpf)
-
-        self.banks = agents.Banks(numberOfBanks)
+        self.firms = agents.Firms(self.numberOfFirms, self.alpha, self.varpf)
+        self.banks = agents.Banks(self.numberOfBanks)
+        self.economy = agents.Economy(self.time)
 
         # firms-banks credit matching adjacency matrix
-        self.link_fb = np.zeros((numberOfFirms, numberOfBanks))
+        # firms borrow from 1 bank but banks have multiple clients
+        self.link_fb = np.zeros((self.numberOfFirms, self.numberOfBanks))
         banksWithFirms = np.ceil(np.random.uniform(0, self.numberOfBanks-1, self.numberOfFirms))
         for i in range(self.numberOfFirms):
             self.link_fb[i][int(banksWithFirms[i])] = 1
@@ -62,10 +66,20 @@ class Simulation:
         # contains banks that firms use as lookup for interestRates
         self.bankPools = np.zeros((self.numberOfFirms, self.chi))
 
-        self.resultFolder = "results/" + str(self.seed) + "/"
+        if not outputFolder:
+            self.outputFolder = "results/" + str(self.seed) + "/"
+        else:
+            if os.path.lexists(outputFolder):
+                raise ValueError("Output folder already exists")
+            self.outputFolder = outputFolder
+        if self.outputFolder[-1] != "/" and os.name == "posix":
+            self.outputFolder += "/"
+        elif self.outputFolder[-1] != "\\" and os.name == "nt":
+            self.outputFolder += "\\"
+
 
         # Output variables
-        self.changeFB = np.array([0]*self.time, dtype=float)
+        self.changeFB = np.array([0]*self.time, dtype=float) # monitors how many firms change bank
         self.firmOutputReport = np.array([0]*self.time, dtype=float)
         self.firmCapitalReport = np.array([0]*self.time, dtype=float)
         self.firmWealthReport = np.array([0]*self.time, dtype=float)
@@ -75,15 +89,12 @@ class Simulation:
         self.firmDefaultReport = np.array([0]*self.time, dtype=float)
 
         # array to store price, wealth, capital,... from a single firm
-        self.individualFirm = np.array([[0,0,0,0,0,0,0,0]], dtype=float)
+        self.individualFirm = np.array([[0,0,0,0,0,0,0,0,0]], dtype=float)
 
         self.bankWealthReport = np.array([0]*self.time, dtype=float)
         self.bankDebtReport = np.array([0]*self.time, dtype=float)
         self.bankProfitReport = np.array([0]*self.time, dtype=float)
         self.bankDefaultReport = np.array([0]*self.time, dtype=float)
-
-        self.GDP = np.array([0]*self.time, dtype=float)
-        self.avgInterest = np.array([0]*self.time, dtype=float)
 
     def findBestBank(self, potentialPartners):
         bestInterest = np.inf
@@ -100,23 +111,23 @@ class Simulation:
         self.bankPools = np.ceil(np.random.uniform(0, self.numberOfBanks-1, \
                             self.chi*self.numberOfFirms).reshape(self.numberOfFirms, self.chi))
         for f in range(self.numberOfFirms):
-            # select potential partners, this is newFallBack
+            # select potential partners
             potentialPartners = self.bankPools[f]
 
-            # select best bank
+            # select best bank out of potentia partners
             bestBankIndex = self.findBestBank(potentialPartners)
             newInterest = self.banks.interestRate[bestBankIndex]
 
             # pick up interest of old partner
-            currentBank = np.nonzero(self.link_fb[f])
-            if not currentBank[0]:
+            currentBank = np.nonzero(self.link_fb[f])[0]
+            if not currentBank:
                 oldInterest = np.inf
             else:
-                oldInterest = self.banks.interestRate[currentBank[0][0]]
+                oldInterest = self.banks.interestRate[currentBank[0]]
 
-            #compare old and new
+            # compare old bank with new
             if (newInterest < oldInterest):
-                #switch
+                # log change in firm-bank relationship
                 self.changeFB[time] = self.changeFB[time] + 1
 
                 # update link
@@ -171,12 +182,12 @@ class Simulation:
             self.link_fb[i][int(banks[j])] = 1
             j += 1
 
-        # update firm variables
+        # create new firms
         self.firms.networth[defaulted] = np.random.uniform(2, size=len(defaulted))
         self.firms.leverage[defaulted] = 1
         self.firms.price[defaulted] = np.random.normal(self.alpha, np.sqrt(self.varpf), size=len(defaulted))
         self.firms.interestRate[defaulted] = self.rCB + self.banks.interestRate[ \
-                np.nonzero(self.link_fb[defaulted])[0][0]] + self.gamma * \
+                np.nonzero(self.link_fb[defaulted])[1]] + self.gamma * \
                 (self.firms.leverage[defaulted] / ((1+self.firms.networth[defaulted] / maxFirmWealth)))
         self.firms.default[defaulted] = 0
 
@@ -207,17 +218,14 @@ class Simulation:
         self.firms.output = self.phi * np.float_power(self.firms.capital, self.beta)
 
     def updateFirmPrice(self):
-        self.firms.price = np.random.normal(self.alpha, self.varpf**2, size=self.numberOfFirms)
+        self.firms.price = np.random.normal(self.alpha, np.sqrt(self.varpf), size=self.numberOfFirms)
 
     def updateFirmInterestRate(self):
-        for f in range(self.numberOfFirms):
-            # interest of bank that firm uses
-            currentBank = np.nonzero(self.link_fb[f])[0]
-            bankInterest = self.banks.interestRate[currentBank[0]]
-            bestFirmWorth = self.maxFirmWealth()
-            self.firms.interestRate[f] = self.rCB + bankInterest + \
-                             self.gamma*(self.firms.leverage[f]) / \
-                             ((1+self.firms.networth[f]/bestFirmWorth))
+        bestFirmWorth = self.maxFirmWealth()
+        banksOfFirms = np.nonzero(self.link_fb)[1]
+        self.firms.interestRate = self.rCB + self.banks.interestRate[banksOfFirms] + \
+                             self.gamma*(self.firms.leverage) / \
+                             ((1+self.firms.networth/bestFirmWorth))
         
     def updateFirmProfit(self):
         self.firms.profit = self.firms.price * self.firms.output - self.firms.interestRate * self.firms.debt
@@ -239,11 +247,8 @@ class Simulation:
         firmsPriceGreaterInterest = []
         firmsPriceLessInterest = []
 
-        for i in range(self.numberOfFirms):
-            if self.firms.price[i] > self.firms.interestRate[i]:
-                firmsPriceGreaterInterest.append(i)
-            else:
-                firmsPriceLessInterest.append(i)
+        firmsPriceGreaterInterest = np.where(self.firms.price > self.firms.interestRate)
+        firmsPriceLessInterest = np.where(self.firms.price <= self.firms.interestRate)
 
         self.firms.leverage[firmsPriceGreaterInterest] = \
                 self.firms.leverage[firmsPriceGreaterInterest] * \
@@ -276,7 +281,7 @@ class Simulation:
         firmsResults = []
         for i in [self.firms.output, self.firms.capital, self.firms.price,
                     self.firms.networth, self.firms.debt, self.firms.profit,
-                    self.firms.default, self.firms.interestRate]:
+                    self.firms.default, self.firms.interestRate, self.firms.leverage]:
                 firmsResults.append(i[-1])
         self.individualFirm = np.concatenate((self.individualFirm, np.array([firmsResults])))
 
@@ -286,21 +291,23 @@ class Simulation:
         self.bankProfitReport[time] = np.sum(self.banks.profit)
         self.bankDefaultReport[time] = np.count_nonzero(self.banks.default)
 
-        self.GDP[time] = totalOutput
-        self.avgInterest[time] = np.mean(self.banks.interestRate)
+        self.economy.GDP[time] = totalOutput
+        self.economy.badDebtAsGDP[time] = np.mean(self.banks.badDebt*100 / totalOutput)
+        self.economy.avgInterest[time] = np.mean(self.banks.interestRate)
+        self.economy.leverage[time] = self.firmDebtReport[time] / self.firmWealthReport[time]
 
     def saveResults(self):
 
         try:
-            os.mkdir(self.resultFolder)
+            os.mkdir(self.outputFolder)
         except FileExistsError:
             print("Simulation with this seed exists")
             override = input("Overwrite results? [Y/n]: ")
             if "N" in override.upper() or ("N" in override.upper() and "Y" in override.upper()):
                 exit()
 
-        infoFile = open(self.resultFolder + "INFO", "+w")
-        infoFile.write("Simulation Configuration\n")
+        infoFile = open(self.outputFolder + "INFO", "+w")
+        infoFile.write("### Simulation Configuration ###\n")
         infoFile.write("\t{0:35} = {1:5}\n".format("Seed", self.seed))
         date = time.strftime("%d %b %Y: %H:%M", time.gmtime())
         infoFile.write("\t{0:35} = {1:5}\n".format("Date ran", date))
@@ -316,7 +323,23 @@ class Simulation:
         infoFile.write("\t{0:35} = {1:5}\n".format("Production function param (phi)", self.phi))
         infoFile.write("\t{0:35} = {1:5}\n".format("Production function param (beta)", self.beta))
         infoFile.write("\t{0:35} = {1:5}\n".format("Central bank interest rate (rCB)", self.rCB))
-        infoFile.write("\t{0:35} = {1:5}\n".format("Bank costs (cB)", self.cB))
+        infoFile.write("\t{0:35} = {1:5}\n\n".format("Bank costs (cB)", self.cB))
+
+        infoFile.write("### Quick Analysis ###\n")
+        infoFile.write("{0:20} = {1:5}\n".format("Mean leverage", np.mean(self.economy.leverage[300:])))
+        infoFile.write("{0:20} = {1:5}\n".format("Mean firm default", np.mean(self.firmDefaultReport)))
+        infoFile.write("{0:20} = {1:5}\n".format("Mean banks default", np.mean(self.bankDefaultReport)))
+        infoFile.write("{0:20} = {1:5}\n".format("Mean percentage GDP as non-performing loans", \
+                np.mean(self.economy.badDebtAsGDP[300:])))
+
+        # Report simulation fails
+        if np.all(self.firms.price == 0):
+            infoFile.write("Warning: Firm price error\n")
+        if np.all(self.economy.leverage == 0):
+            infoFile.write("Warning: Economy leverage error\n")
+        if np.mean(self.economy.badDebtAsGDP[300:]) > 3:
+            infoFile.write("Warning: High Bad Debt\n")
+
         infoFile.close()
 
         print("Writing simulation results with seed " + str(self.seed))
@@ -326,9 +349,9 @@ class Simulation:
                 "Firms Aggregate Profit", "Total defaulted firms", \
                 "Banks Aggregate Wealth", "Banks Aggregate Debt", \
                 "Banks Aggregate Profit", "Total defaulted banks", \
-                "Economy GDP", "Average interest rate"]
+                "Economy GDP", "Average interest rate", "Economy Debt-Equity Ratio"]
 
-        f = open(self.resultFolder + "aggregateResults.csv", "w+")
+        f = open(self.outputFolder + "aggregateResults.csv", "w+")
 
         for name in columnNames:
             f.write(name+", ")
@@ -345,17 +368,19 @@ class Simulation:
                                 self.bankDebtReport,
                                 self.bankProfitReport,
                                 self.bankDefaultReport,
-                                self.GDP,
-                                self.avgInterest))
+                                self.economy.GDP,
+                                self.economy.badDebtAsGDP,
+                                self.economy.avgInterest,
+                                self.economy.leverage))
         np.savetxt(f, output.transpose(), delimiter=",")
         f.close()
 
         columnNames = ["Firm Output", "Firm Capital", "Firm Price", \
                 "Firm Networth", "Firm Debt", "Firm Profit", \
-                "Defaulted", "Firm Interest Rate"]
+                "Defaulted", "Firm Interest Rate", "Firm Leverage"]
 
         # Write results for special firm
-        f = open(self.resultFolder + "individualFirmResults.csv", "w+")
+        f = open(self.outputFolder + "individualFirmResults.csv", "w+")
         for name in columnNames:
             f.write(name+", ")
         f.write('\n')
@@ -399,7 +424,8 @@ class Simulation:
 
         def printVar(self, args):
             try:
-                if (not args[0].startswith("firms.")) and (not args[0].startswith("banks.")):
+                if (not args[0].startswith("firms.")) and (not args[0].startswith("banks."))\
+                        and (not args[0].startswith("economy.")):
                     raise ValueError
                 exec("print(self." + args[0] + ")")
             except (ValueError, IndexError):
@@ -447,6 +473,8 @@ class Simulation:
 
     def run(self):
         print("Running Simulation...")
+        p = []
+        d = []
         for t in range(self.time):
             self.currentStep = t
             # replace defaulted firms and banks
@@ -504,5 +532,25 @@ class Simulation:
                 print("Time: ", t)
                 self.interactiveShell()
 
+            if t > 300 and t%2 == 0:
+                data = self.firms.networth[self.firms.networth > 0]
+                MLE = stats.genpareto.fit(data)
+                dvalue, pvalue = stats.kstest(data, 'genpareto', args=MLE)
+                p.append(pvalue)
+                d.append(dvalue)
+
         self.saveResults()
 
+        #
+        # Check firm wealth follows power law
+        #
+        data = self.firms.networth[self.firms.networth > 0]
+        infoFile = open(self.outputFolder + "INFO", "a")
+        criticalValue = 1.36 / np.sqrt(len(data))
+        infoFile.write("KS test: " + str(np.mean(d)) + ", " + str(np.mean(p)) + "\n")
+        infoFile.write("Critical Value 95% confidence: " + str(criticalValue) + "\n")
+        if np.mean(d) < criticalValue:
+            infoFile.write("Firm networth Follows pareto distribution\n")
+        else:
+            infoFile.write("Rejected null hypothesis - not pareto distribution\n")
+        infoFile.close()
