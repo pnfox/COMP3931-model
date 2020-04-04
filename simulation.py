@@ -532,25 +532,25 @@ class Simulation:
                 print("Time: ", t)
                 self.interactiveShell()
 
-            if t > 300 and t%2 == 0:
-                data = self.firms.networth[self.firms.networth > 0]
-                MLE = stats.genpareto.fit(data)
-                dvalue, pvalue = stats.kstest(data, 'genpareto', args=MLE)
-                p.append(pvalue)
-                d.append(dvalue)
+        #    if t > 300 and t%2 == 0:
+        #        data = self.firms.networth[self.firms.networth > 0]
+        #        MLE = stats.genpareto.fit(data)
+        #        dvalue, pvalue = stats.kstest(data, 'genpareto', args=MLE)
+        #        p.append(pvalue)
+        #        d.append(dvalue)
 
         self.saveResults()
 
         #
         # Check firm wealth follows power law
         #
-        data = self.firms.networth[self.firms.networth > 0]
-        infoFile = open(self.outputFolder + "INFO", "a")
-        criticalValue = 1.36 / np.sqrt(len(data))
-        infoFile.write("KS test: " + str(np.mean(d)) + ", " + str(np.mean(p)) + "\n")
-        infoFile.write("Critical Value 95% confidence: " + str(criticalValue) + "\n")
-        if np.mean(d) < criticalValue:
-            infoFile.write("Firm networth Follows pareto distribution\n")
-        else:
-            infoFile.write("Rejected null hypothesis - not pareto distribution\n")
-        infoFile.close()
+        #data = self.firms.networth[self.firms.networth > 0]
+        #infoFile = open(self.outputFolder + "INFO", "a")
+        #criticalValue = 1.36 / np.sqrt(len(data))
+        #infoFile.write("KS test: " + str(np.mean(d)) + ", " + str(np.mean(p)) + "\n")
+        #infoFile.write("Critical Value 95% confidence: " + str(criticalValue) + "\n")
+        #if np.mean(d) < criticalValue:
+        #    infoFile.write("Firm networth Follows pareto distribution\n")
+        #else:
+        #    infoFile.write("Rejected null hypothesis - not pareto distribution\n")
+        #infoFile.close()

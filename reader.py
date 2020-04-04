@@ -79,6 +79,24 @@ def tempAnalysis():
     ax[1].set_title("Pearson correlation")
     plt.show()
 
+def tempAnalysis2():
+
+    NL = []; LN = []; DL = []; LD = [];
+    for st in range(0,20):
+        NL.append(stats.pearsonr(firms.networth[0:100], economy.leverage[0+st:100+st]))
+        LN.append(stats.pearsonr(economy.leverage[0:100], firms.networth[0+st:100+st]))
+        DL.append(stats.pearsonr(economy.badDebtAsGDP[0:100], economy.leverage[0+st:100+st]))
+        LD.append(stats.pearsonr(economy.leverage[0:100], economy.badDebtAsGDP[0+st:100+st]))
+
+    plt.plot(NL, label="networth - leverage+")
+    plt.show()
+
+    plt.plot(LN, label="leverage - networth+")
+    plt.show()
+
+    plt.plot(DL, label="debt - leverage+")
+    plt.show()
+
 def classify(key):
 
     if not key or type(key) != str:
@@ -277,6 +295,8 @@ def executeCommand(cmd):
         print(findSimulations(cmd[1], cmd[2]))
     if cmd[0] == "test":
         tempAnalysis()
+    if cmd[0] == "test2":
+        tempAnalysis2()
     if cmd[0] == "open":
         choice = selectResults(folders)
         if choice > len(folders) or choice < 0:
