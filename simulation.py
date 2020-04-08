@@ -477,12 +477,6 @@ class Simulation:
         d = []
         for t in range(self.time):
             self.currentStep = t
-            # replace defaulted firms and banks
-            try:
-                self.replaceDefaults()
-            except Exception as e:
-                print("Problem with replacing defaulted firms")
-                print(e)
 
             # update banks interest rates
             self.updateInterestRates()
@@ -504,8 +498,6 @@ class Simulation:
 
             # update price
             self.updateFirmPrice()
-
-            # find best firm
 
             # compute interest rate charged to firms
             self.updateFirmInterestRate()
@@ -531,6 +523,13 @@ class Simulation:
                     (self.continueUntilTime == self.currentStep):
                 print("Time: ", t)
                 self.interactiveShell()
+
+            # replace defaulted firms and banks
+            try:
+                self.replaceDefaults()
+            except Exception as e:
+                print("Problem with replacing defaulted firms")
+                print(e)
 
         #    if t > 300 and t%2 == 0:
         #        data = self.firms.networth[self.firms.networth > 0]
