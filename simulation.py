@@ -218,7 +218,7 @@ class Simulation:
         self.firms.output = self.phi * np.float_power(self.firms.capital, self.beta)
 
     def updateFirmPrice(self):
-        self.firms.price = np.random.normal(self.alpha, np.sqrt(self.varpf), size=self.numberOfFirms)
+        self.firms.price += np.random.normal(self.alpha, np.sqrt(self.varpf), size=self.numberOfFirms)
 
     def updateFirmInterestRate(self):
         bestFirmWorth = self.maxFirmWealth()

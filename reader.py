@@ -18,6 +18,9 @@ resultNames = {0: "Output", 1: "Capital",
 
 def plot(data, data2=None, data3=None, data4=None, title=""):
 
+    data = normalize(data)
+    if np.any(data2) != None:
+        data2 = normalize(data2)
     maxValue = -np.inf
     minValue = 0
     fig, ax = plt.subplots()
@@ -40,40 +43,113 @@ def plot(data, data2=None, data3=None, data4=None, title=""):
         print("Error plot: data must be passed to function")
         return
 
-def pearCoeffs(x,y, stepsize):
-    index = 0
+def pearCoeffs(x,y, stepsize, a):
+    index = a
     pearson = []
     domain = []
     for i in range(len(y)-stepsize):
         p = stats.pearsonr(x[i:stepsize+i], y[i:stepsize+i])
-        if p[1] < 0.2:
+        if p[1] < 0.05:
             pearson.append(p[0])
             domain.append(index)
-        index += 1
+        index += a
 
     return domain, pearson
 
+def spline(data, smooth=2, scale=1):
+    x = np.linspace(0, len(data), num=len(data))
+    spline = splrep(x, data, k=3, s=smooth)
+    x = np.linspace(0, len(data), int(len(data)*scale)) # if this x has more than len(data) lots of pearson oscillation
+    return x, splev(x, spline)
+
+def normalize(data):
+    amin = np.amin(data)
+    amax = np.amax(data)
+    data = (data - amin) / (amax - amin)
+    return data
+
 def tempAnalysis():
-    y = firms.output
-    time = np.linspace(0, len(y), num=len(y))
 
-    spline = splrep(time, y, k=3, s=25)
-    x = np.linspace(0, len(y), int(len(y)/6))
-    y2 = splev(x, spline)
+    # magic algorithm that transforms data into more useful stuff
+    # hopefully this makes cycles more clear
+    x, smoothLeverage = spline(economy.leverage, \
+            len(economy.leverage)*np.var(economy.leverage)*0.6, 3)
+    #smoothLeverage = np.gradient(smoothLeverage)
 
-    plt.plot(y, label='Firm output')
-    plt.plot(x, y2, label='splines')
+    # plot algorithm output
+    fig,ax = plt.subplots(3,1,sharex=True)
+    ax[0].plot(banks.profit)
+    ax[0].set_title("Economy output")
+    ax[0].grid(True)
+    ax[1].plot(economy.leverage)
+    ax[1].set_title("Economy leverage")
+    ax[1].grid(True)
+    extend=[-0.5, 800.5, 0, 1]
+    ax[2].imshow(smoothLeverage[np.newaxis,:], cmap="plasma", aspect="auto", extent=extend)
+    ax[2].set_title("magic")
+    ax[2].grid(True)
+    plt.show()
+
+    print("Plotting normalized leverage and normalized smooth leverage")
+    normalizedLeverage = normalize(economy.leverage)
+    normalizedChange = normalize(smoothLeverage)
+
+    plt.plot(normalizedLeverage)
+    plt.plot(x, normalizedChange)
+    plt.show()
+
+    bestDifference = np.inf
+    #bestI = 0
+    #bestJ = 0
+    #for j in np.linspace(0.45,0.8,20):
+    #    x, smoothLeverage = spline(economy.leverage, \
+    #        len(economy.leverage)*np.var(economy.leverage)*j, 3)
+    #    for i in np.linspace(0.005,0.4,500):
+    #        x2, smoothNetworth = spline(banks.profit, \
+    #            len(firms.networth)*np.var(banks.profit)*i, 3)
+    #        normalizedNetworth = normalize(smoothNetworth)
+    #        difference = np.abs(normalizedNetworth - normalizedChange)
+    #        if( np.mean(difference) < bestDifference ):
+    #            bestDifference = np.mean(difference)
+    #            bestI = i
+    #            bestJ = j
+
+    x2, smoothNetworth = spline(banks.networth, \
+        len(firms.networth)*np.var(banks.networth)*0.35, 3)
+    normalizedNetworth = normalize(smoothNetworth)
+
+    nw = normalize(banks.networth)
+    plt.plot(nw)
+    plt.plot(x2, normalizedNetworth)
+    plt.show()
+
+    plt.plot(x2, normalizedNetworth, label="smooth Networth")
+    plt.plot(x, normalizedChange, label="smooth Leverage")
     plt.legend()
     plt.grid(True)
     plt.show()
 
+    x, splineOutput = spline(firms.output, weight)
+    x, splineLeverage = spline(economy.leverage, weight)
+
+    fig,ax = plt.subplots(2,1,sharex=True)
+    ax[0].plot(firms.networth)
+    ax[0].set_title("Economy output")
+    ax[0].grid(True)
+    ax[1].plot(x, splineLeverage)
+    ax[1].set_title("leverage splines")
+    ax[1].grid(True)
+    plt.show()
+
 
     fig, ax = plt.subplots(2,1, sharex=True)
-    ax[0].plot(x, y2, label='splines')
+    ax[0].plot(x, splineOutput, label='splines')
     ax[0].legend()
     ax[0].grid(True)
-    x, pearson = pearCoeffs(economy.badDebtAsGDP, economy.leverage, 15)
-    ax[1].scatter(x,pearson)
+    x, pearson = pearCoeffs(splineOutput, splineLeverage, 15, x[1]-x[0])
+    ax[1].plot(x,pearson)
+    x, pearson = pearCoeffs(firms.networth, economy.leverage, 15, 1)
+    ax[1].plot(x,pearson)
     ax[1].set_ylim(-1,1)
     ax[1].grid(True)
     ax[1].set_title("Pearson correlation")
@@ -81,20 +157,34 @@ def tempAnalysis():
 
 def tempAnalysis2():
 
-    NL = []; LN = []; DL = []; LD = [];
-    for st in range(0,20):
-        NL.append(stats.pearsonr(firms.networth[0:100], economy.leverage[0+st:100+st]))
-        LN.append(stats.pearsonr(economy.leverage[0:100], firms.networth[0+st:100+st]))
-        DL.append(stats.pearsonr(economy.badDebtAsGDP[0:100], economy.leverage[0+st:100+st]))
-        LD.append(stats.pearsonr(economy.leverage[0:100], economy.badDebtAsGDP[0+st:100+st]))
+    window = 10
+    window2 = 50
+    NL = []; NL2 = []
+    for lag in range(0,100):
+        NL.append(stats.pearsonr(firms.networth[0+lag:window+lag], economy.leverage[0+lag:window+lag]))
+        NL2.append(stats.pearsonr(firms.networth[0:window2], economy.leverage[0+lag:window2+lag]))
 
-    plt.plot(NL, label="networth - leverage+")
+    fig, ax = plt.subplots(2,1,sharex=True)
+    ax[0].plot(NL)
+    ax[0].set_title(label="networth - leverage+ window=30")
+    ax[0].grid(True)
+    ax[1].plot(NL2)
+    ax[1].set_title(label="networth - leverage+ window=50")
+    ax[1].grid(True)
     plt.show()
 
-    plt.plot(LN, label="leverage - networth+")
-    plt.show()
+def montecarlo():
+    
+    aggregateOutput = np.zeros(800)
+    for folder in glob.glob("results/*_var02/"):
+        firms = openSimulationFiles(folder)[0]
+        aggregateOutput = np.column_stack((aggregateOutput, firms.output))
 
-    plt.plot(DL, label="debt - leverage+")
+    mean = np.mean(aggregateOutput, axis=1)
+    std = np.std(aggregateOutput, axis=1)
+    plt.plot(mean, c='c')
+    plt.plot(mean+std, dashes=[2,2], c='c')
+    plt.plot(mean-std, dashes=[2,2], c='c')
     plt.show()
 
 def classify(key):
@@ -207,7 +297,7 @@ def openSimulationFiles(folder):
     try:
         with open(folder + "aggregateResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = np.array(list(reader)[300:], dtype=float) # ignore first 300 lines
+            lines = np.array(list(reader)[201:], dtype=float) # ignore first 300 lines
             firms.output = lines.transpose()[0] # sum of total firm output at each step
             firms.capital = lines.transpose()[1] # sum of total firm capital at each step
             firms.price = lines.transpose()[2] # average firm price at each step
@@ -297,6 +387,8 @@ def executeCommand(cmd):
         tempAnalysis()
     if cmd[0] == "test2":
         tempAnalysis2()
+    if cmd[0] == "monte":
+        montecarlo()
     if cmd[0] == "open":
         choice = selectResults(folders)
         if choice > len(folders) or choice < 0:
