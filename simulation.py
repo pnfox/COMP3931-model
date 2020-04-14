@@ -126,7 +126,7 @@ class Simulation:
                 oldInterest = self.banks.interestRate[currentBank[0]]
 
             # compare old bank with new
-            if (newInterest < oldInterest):
+            if ( newInterest < oldInterest ):
                 # log change in firm-bank relationship
                 self.changeFB[time] = self.changeFB[time] + 1
 

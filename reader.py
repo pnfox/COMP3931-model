@@ -18,9 +18,6 @@ resultNames = {0: "Output", 1: "Capital",
 
 def plot(data, data2=None, data3=None, data4=None, title=""):
 
-    data = normalize(data)
-    if np.any(data2) != None:
-        data2 = normalize(data2)
     maxValue = -np.inf
     minValue = 0
     fig, ax = plt.subplots()
@@ -73,7 +70,7 @@ def tempAnalysis():
     # magic algorithm that transforms data into more useful stuff
     # hopefully this makes cycles more clear
     x, smoothLeverage = spline(economy.leverage, \
-            len(economy.leverage)*np.var(economy.leverage)*0.6, 3)
+            len(economy.leverage)*np.var(economy.leverage)*0.5, 3)
     #smoothLeverage = np.gradient(smoothLeverage)
 
     # plot algorithm output
@@ -98,27 +95,11 @@ def tempAnalysis():
     plt.plot(x, normalizedChange)
     plt.show()
 
-    bestDifference = np.inf
-    #bestI = 0
-    #bestJ = 0
-    #for j in np.linspace(0.45,0.8,20):
-    #    x, smoothLeverage = spline(economy.leverage, \
-    #        len(economy.leverage)*np.var(economy.leverage)*j, 3)
-    #    for i in np.linspace(0.005,0.4,500):
-    #        x2, smoothNetworth = spline(banks.profit, \
-    #            len(firms.networth)*np.var(banks.profit)*i, 3)
-    #        normalizedNetworth = normalize(smoothNetworth)
-    #        difference = np.abs(normalizedNetworth - normalizedChange)
-    #        if( np.mean(difference) < bestDifference ):
-    #            bestDifference = np.mean(difference)
-    #            bestI = i
-    #            bestJ = j
-
-    x2, smoothNetworth = spline(banks.networth, \
-        len(firms.networth)*np.var(banks.networth)*0.35, 3)
+    x2, smoothNetworth = spline(firms.output, \
+        len(firms.networth)*np.var(firms.output)*0.2, 3)
     normalizedNetworth = normalize(smoothNetworth)
 
-    nw = normalize(banks.networth)
+    nw = normalize(firms.output)
     plt.plot(nw)
     plt.plot(x2, normalizedNetworth)
     plt.show()
@@ -128,6 +109,16 @@ def tempAnalysis():
     plt.legend()
     plt.grid(True)
     plt.show()
+
+    plt.xcorr(normalizedNetworth, normalizedChange, maxlags=30)
+    plt.show()
+    
+    # see if how networth and leverage correlate over time
+    x, pearson = pearCoeffs(normalizedNetworth, normalizedChange, 50, x[1]-x[0])
+    plt.plot(x, pearson)
+    plt.grid(True)
+    plt.show()
+    return
 
     x, splineOutput = spline(firms.output, weight)
     x, splineLeverage = spline(economy.leverage, weight)
