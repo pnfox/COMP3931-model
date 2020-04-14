@@ -62,7 +62,7 @@ def spline(data, smooth=2, scale=1):
 def normalize(data):
     amin = np.amin(data)
     amax = np.amax(data)
-    data = (data - amin) / (amax - amin)
+    data = (data - np.mean(data)) / np.std(data)
     return data
 
 def tempAnalysis():
@@ -96,14 +96,16 @@ def tempAnalysis():
     plt.show()
 
     x2, smoothNetworth = spline(firms.output, \
-        len(firms.networth)*np.var(firms.output)*0.2, 3)
+        len(firms.networth)*np.var(firms.output)*0.13, 3)
     normalizedNetworth = normalize(smoothNetworth)
 
+    print("Plotting normalized output and normalized smooth output")
     nw = normalize(firms.output)
     plt.plot(nw)
     plt.plot(x2, normalizedNetworth)
     plt.show()
 
+    print("Plotting smooth networth and smooth leverage")
     plt.plot(x2, normalizedNetworth, label="smooth Networth")
     plt.plot(x, normalizedChange, label="smooth Leverage")
     plt.legend()
@@ -112,12 +114,21 @@ def tempAnalysis():
 
     plt.xcorr(normalizedNetworth, normalizedChange, maxlags=30)
     plt.show()
+
+    plt.plot(np.correlate(normalizedNetworth, normalizedChange, "same"))
+    plt.show()
     
     # see if how networth and leverage correlate over time
-    x, pearson = pearCoeffs(normalizedNetworth, normalizedChange, 50, x[1]-x[0])
-    plt.plot(x, pearson)
-    plt.grid(True)
+    # manually calculate plt.xcorr
+    xcorr = np.array([])
+    k = 0
+    for i in range(len(normalizedNetworth)):
+        correlation = np.dot(np.roll(normalizedNetworth,k), normalizedChange)
+        xcorr = np.append(xcorr, correlation)
+        k += 1
+    plt.plot(xcorr)
     plt.show()
+
     return
 
     x, splineOutput = spline(firms.output, weight)
