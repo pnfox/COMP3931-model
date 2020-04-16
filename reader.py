@@ -60,8 +60,6 @@ def spline(data, smooth=2, scale=1):
     return x, splev(x, spline)
 
 def normalize(data):
-    amin = np.amin(data)
-    amax = np.amax(data)
     data = (data - np.mean(data)) / np.std(data)
     return data
 
@@ -70,7 +68,7 @@ def tempAnalysis():
     # magic algorithm that transforms data into more useful stuff
     # hopefully this makes cycles more clear
     x, smoothLeverage = spline(economy.leverage, \
-            len(economy.leverage)*np.var(economy.leverage)*0.5, 3)
+            len(economy.leverage)*np.var(economy.leverage)*0.6, 3)
     #smoothLeverage = np.gradient(smoothLeverage)
 
     # plot algorithm output
@@ -95,67 +93,31 @@ def tempAnalysis():
     plt.plot(x, normalizedChange)
     plt.show()
 
-    x2, smoothNetworth = spline(firms.output, \
-        len(firms.networth)*np.var(firms.output)*0.13, 3)
+    x2, smoothNetworth = spline(firms.networth, \
+        len(firms.networth)*np.var(firms.networth)*0.25, 3)
     normalizedNetworth = normalize(smoothNetworth)
 
     print("Plotting normalized output and normalized smooth output")
-    nw = normalize(firms.output)
+    nw = normalize(firms.networth)
     plt.plot(nw)
     plt.plot(x2, normalizedNetworth)
     plt.show()
 
-    print("Plotting smooth networth and smooth leverage")
-    plt.plot(x2, normalizedNetworth, label="smooth Networth")
-    plt.plot(x, normalizedChange, label="smooth Leverage")
-    plt.legend()
-    plt.grid(True)
+    # calculate plt.xcorr
+    corr = np.correlate(normalizedNetworth, normalizedChange, "full")
+    corr /= np.sqrt(np.dot(normalizedNetworth, normalizedNetworth) * \
+            np.dot(normalizedChange, normalizedChange))
+    plt.plot(corr)
     plt.show()
-
-    plt.xcorr(normalizedNetworth, normalizedChange, maxlags=30)
-    plt.show()
-
-    plt.plot(np.correlate(normalizedNetworth, normalizedChange, "same"))
-    plt.show()
-    
-    # see if how networth and leverage correlate over time
-    # manually calculate plt.xcorr
-    xcorr = np.array([])
-    k = 0
-    for i in range(len(normalizedNetworth)):
-        correlation = np.dot(np.roll(normalizedNetworth,k), normalizedChange)
-        xcorr = np.append(xcorr, correlation)
-        k += 1
-    plt.plot(xcorr)
+    maxlags = 100
+    Nx = len(normalizedNetworth)
+    lags = np.arange(-maxlags, maxlags + 1)
+    correls = corr[Nx - 1 - maxlags:Nx + maxlags]
+    xspace = np.linspace(-maxlags/2, maxlags/2, len(correls))
+    plt.plot(xspace, correls)
     plt.show()
 
     return
-
-    x, splineOutput = spline(firms.output, weight)
-    x, splineLeverage = spline(economy.leverage, weight)
-
-    fig,ax = plt.subplots(2,1,sharex=True)
-    ax[0].plot(firms.networth)
-    ax[0].set_title("Economy output")
-    ax[0].grid(True)
-    ax[1].plot(x, splineLeverage)
-    ax[1].set_title("leverage splines")
-    ax[1].grid(True)
-    plt.show()
-
-
-    fig, ax = plt.subplots(2,1, sharex=True)
-    ax[0].plot(x, splineOutput, label='splines')
-    ax[0].legend()
-    ax[0].grid(True)
-    x, pearson = pearCoeffs(splineOutput, splineLeverage, 15, x[1]-x[0])
-    ax[1].plot(x,pearson)
-    x, pearson = pearCoeffs(firms.networth, economy.leverage, 15, 1)
-    ax[1].plot(x,pearson)
-    ax[1].set_ylim(-1,1)
-    ax[1].grid(True)
-    ax[1].set_title("Pearson correlation")
-    plt.show()
 
 def tempAnalysis2():
 
@@ -177,16 +139,45 @@ def tempAnalysis2():
 
 def montecarlo():
     
-    aggregateOutput = np.zeros(800)
-    for folder in glob.glob("results/*_var02/"):
-        firms = openSimulationFiles(folder)[0]
-        aggregateOutput = np.column_stack((aggregateOutput, firms.output))
+    results = glob.glob("results/*_var02/")
+    if not results:
+        print("No result files to analyze")
+        return
 
-    mean = np.mean(aggregateOutput, axis=1)
-    std = np.std(aggregateOutput, axis=1)
-    plt.plot(mean, c='c')
-    plt.plot(mean+std, dashes=[2,2], c='c')
-    plt.plot(mean-std, dashes=[2,2], c='c')
+    # Collect data of many simulations
+    aggregateData = np.zeros((len(results), 8, 1))
+    i = 0
+    for folder in results:
+        firms = openSimulationFiles(folder)[0]
+        features = [firms.output, firms.networth, firms.debt, \
+                firms.profit, firms.capital, banks.networth, \
+                banks.badDebt, banks.profit]
+
+        # Use splines to smooth randomness of data
+        x, smoothLeverage = spline(economy.leverage, \
+            len(economy.leverage)*np.var(economy.leverage)*0.6, 3)
+        smoothLeverage = normalize(smoothLeverage)
+
+        # Calculate correlations of leverage with other features
+        corrArray = np.zeros((8,1))
+        j = 0
+        for data in features:
+            x2, smoothData = spline(data, \
+                len(data)*np.var(data)*0.2, 3)
+            smoothData = normalize(smoothData)
+            corr = stats.pearsonr(smoothData, smoothLeverage)[1]
+            #corr /= np.sqrt(np.dot(smoothData, smoothData) * \
+            #        np.dot(smoothLeverage, smoothLeverage))
+            corrArray[j] = corr
+            j += 1
+        # Store correlation values in array
+        aggregateData[i] = corrArray
+        i += 1
+
+    mean = np.mean(aggregateData, axis=0)
+
+    print(mean)
+    plt.plot(mean[1], c='c')
     plt.show()
 
 def classify(key):
