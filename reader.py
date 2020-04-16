@@ -137,6 +137,30 @@ def tempAnalysis2():
     ax[1].grid(True)
     plt.show()
 
+# For a given simulation finds correlations of x with features
+def findCorrelations(firms, x):
+    features = [firms.output, firms.networth, firms.debt, \
+            firms.profit, firms.capital, banks.networth, \
+            banks.badDebt, banks.profit]
+
+    # Use splines to smooth randomness of data
+    x, smoothLeverage = spline(x, \
+        len(x)*np.var(x)*0.6, 3)
+    smoothLeverage = normalize(smoothLeverage)
+
+    # Calculate correlations of leverage with other features
+    corrArray = np.zeros((8,1))
+    j = 0
+    for data in features:
+        x2, smoothData = spline(data, \
+            len(data)*np.var(data)*0.2, 3)
+        smoothData = normalize(smoothData)
+        corr = stats.pearsonr(smoothData, smoothLeverage)[1]
+        corrArray[j] = corr
+        j += 1
+
+    return corrArray
+
 def montecarlo():
     
     results = glob.glob("results/*_var02/")
@@ -148,37 +172,16 @@ def montecarlo():
     aggregateData = np.zeros((len(results), 8, 1))
     i = 0
     for folder in results:
-        firms = openSimulationFiles(folder)[0]
-        features = [firms.output, firms.networth, firms.debt, \
-                firms.profit, firms.capital, banks.networth, \
-                banks.badDebt, banks.profit]
+        firms, banks, individualfirm, economy, parameters  = openSimulationFiles(folder)
 
-        # Use splines to smooth randomness of data
-        x, smoothLeverage = spline(economy.leverage, \
-            len(economy.leverage)*np.var(economy.leverage)*0.6, 3)
-        smoothLeverage = normalize(smoothLeverage)
-
-        # Calculate correlations of leverage with other features
-        corrArray = np.zeros((8,1))
-        j = 0
-        for data in features:
-            x2, smoothData = spline(data, \
-                len(data)*np.var(data)*0.2, 3)
-            smoothData = normalize(smoothData)
-            corr = stats.pearsonr(smoothData, smoothLeverage)[1]
-            #corr /= np.sqrt(np.dot(smoothData, smoothData) * \
-            #        np.dot(smoothLeverage, smoothLeverage))
-            corrArray[j] = corr
-            j += 1
         # Store correlation values in array
-        aggregateData[i] = corrArray
+        aggregateData[i] = findCorrelations(firms, economy.leverage)
         i += 1
 
     mean = np.mean(aggregateData, axis=0)
 
+    print("Average correlations with leverage and features")
     print(mean)
-    plt.plot(mean[1], c='c')
-    plt.show()
 
 def classify(key):
 
