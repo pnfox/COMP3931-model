@@ -144,18 +144,21 @@ def findCorrelations(firms, x):
             banks.badDebt, banks.profit]
 
     # Use splines to smooth randomness of data
-    x, smoothLeverage = spline(x, \
-        len(x)*np.var(x)*0.6, 3)
-    smoothLeverage = normalize(smoothLeverage)
+    smoothX = spline(x, \
+        len(x)*np.var(x)*0.6, 3)[1]
+    smoothX = normalize(smoothX)
 
     # Calculate correlations of leverage with other features
-    corrArray = np.zeros((8,1))
+    corrArray = np.zeros((8,4799))
     j = 0
     for data in features:
-        x2, smoothData = spline(data, \
-            len(data)*np.var(data)*0.2, 3)
+        smoothData = spline(data, \
+            len(data)*np.var(data)*0.2, 3)[1]
         smoothData = normalize(smoothData)
-        corr = stats.pearsonr(smoothData, smoothLeverage)[1]
+        corr = np.correlate(smoothData, smoothX, "full")
+        corr /= np.sqrt(np.dot(smoothData, smoothData) * \
+            np.dot(smoothX, smoothX))
+        #corr = stats.pearsonr(smoothData, smoothX)[1]
         corrArray[j] = corr
         j += 1
 
@@ -169,19 +172,21 @@ def montecarlo():
         return
 
     # Collect data of many simulations
-    aggregateData = np.zeros((len(results), 8, 1))
+    aggregateCorrelations = np.zeros((len(results), 8, 4799))
     i = 0
     for folder in results:
         firms, banks, individualfirm, economy, parameters  = openSimulationFiles(folder)
 
         # Store correlation values in array
-        aggregateData[i] = findCorrelations(firms, economy.leverage)
+        aggregateCorrelations[i] = findCorrelations(firms, economy.leverage)
         i += 1
 
-    mean = np.mean(aggregateData, axis=0)
+    meanCorr = np.mean(aggregateCorrelations, axis=0)
 
     print("Average correlations with leverage and features")
-    print(mean)
+    for i in meanCorr:
+        print(np.amax(i), np.amin(i))
+
 
 def classify(key):
 
