@@ -164,29 +164,69 @@ def findCorrelations(firms, x):
 
     return corrArray
 
+#
+# Returns the indices where stationaryPoints occur in data
+#
+def findStationaryPoints(data):
+    stationaryPoints = np.array([], dtype=int)
+    diff = np.fabs(np.diff(data))
+    avgDiff = np.mean(diff)
+    variance = np.var(diff)
+    index = 0
+    for i in data:
+        if index == len(data)-1:
+            continue
+        if data[index]*data[index+1] < 0:
+            stationaryPoints = np.append(stationaryPoints, index)
+        index += 1
+
+    return stationaryPoints
+
 def montecarlo():
     
-    results = glob.glob("results/*_var02/")
-    if not results:
+    simulations = glob.glob("results/*_var02/")
+    if not simulations:
         print("No result files to analyze")
         return
 
     # Collect data of many simulations
-    aggregateCorrelations = np.zeros((len(results), 8, 4799))
+    aggregateCorrelations = np.zeros((len(simulations), 8, 4799)) # correlation vectors of leverage vs 8 features
+    aggregateCrises = np.zeros((len(simulations), 2)) # for each simulation stores number of crises and there size
     i = 0
-    for folder in results:
+    for folder in simulations:
         firms, banks, individualfirm, economy, parameters  = openSimulationFiles(folder)
 
         # Store correlation values in array
         aggregateCorrelations[i] = findCorrelations(firms, economy.leverage)
+
+        # Find boom and busts of economy
+        x, smoothLeverage = spline(firms.output, \
+                len(firms.output)*np.var(firms.output)*0.15, 3)
+        sp = findStationaryPoints(np.gradient(smoothLeverage))
+        crisesSize = np.zeros(len(sp))
+        index = 0
+        for p in sp:
+            if p != sp[0]: # skip first
+                crisesSize[index] = np.fabs(smoothLeverage[p] - smoothLeverage[previous])
+            previous = p
+            index += 1
+
+        aggregateCrises[i][0] = len(sp)
+        aggregateCrises[i][1] = np.mean(crisesSize)
         i += 1
 
     meanCorr = np.mean(aggregateCorrelations, axis=0)
 
-    print("Average correlations with leverage and features")
+    print("Max and Min correlations with leverage vs features")
     for i in meanCorr:
         print(np.amax(i), np.amin(i))
 
+    print("Average & variance of number of boom and busts")
+    print(np.mean(aggregateCrises, axis=0)[0], np.std(aggregateCrises, axis=0)[0])
+    print(np.amin(aggregateCrises, axis=0)[0], np.amax(aggregateCrises, axis=0)[0])
+
+    print("Average crises size")
+    print(np.mean(aggregateCrises, axis=0)[1])
 
 def classify(key):
 
