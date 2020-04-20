@@ -40,6 +40,25 @@ def plot(data, data2=None, data3=None, data4=None, title=""):
         print("Error plot: data must be passed to function")
         return
 
+def multiplot(firms, banks):
+    plt.plot(firms.output, linewidth=2)
+    plt.savefig("../COMP3931-report/images/firmoutput.png", bbox_inches = 'tight',
+    pad_inches = 0)
+    plt.clf()
+    plt.plot(firms.debt, linewidth=2)
+    plt.savefig("../COMP3931-report/images/firmdebt.png", bbox_inches = 'tight',
+    pad_inches = 0)
+    plt.clf()
+    plt.plot(firms.price)
+    #plt.hist(firms.price, bins=40)
+    plt.savefig("../COMP3931-report/images/firmprice.png", bbox_inches = 'tight',
+    pad_inches = 0)
+    plt.clf()
+    plt.plot(banks.networth, linewidth=2)
+    plt.savefig("../COMP3931-report/images/banknetworth.png", bbox_inches = 'tight',
+    pad_inches = 0)
+    plt.clf()
+
 def pearCoeffs(x,y, stepsize, a):
     index = a
     pearson = []
@@ -338,7 +357,7 @@ def openSimulationFiles(folder):
     try:
         with open(folder + "aggregateResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = np.array(list(reader)[201:], dtype=float) # ignore first 300 lines
+            lines = np.array(list(reader)[1:], dtype=float) # ignore first 300 lines
             firms.output = lines.transpose()[0] # sum of total firm output at each step
             firms.capital = lines.transpose()[1] # sum of total firm capital at each step
             firms.price = lines.transpose()[2] # average firm price at each step
@@ -451,6 +470,8 @@ def executeCommand(cmd):
             return
         # if we get here cmd is valid
         exec(cmd[0] + "(" + args + ")")
+    if cmd[0] == "multiplot":
+        multiplot(firms, banks)
 
     if cmd[0] == "printparams" or cmd[0] == "params":
         for x in parameters:
