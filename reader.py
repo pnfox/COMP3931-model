@@ -112,14 +112,16 @@ def tempAnalysis():
     plt.plot(x, normalizedChange)
     plt.show()
 
-    x2, smoothNetworth = spline(firms.networth, \
-        len(firms.networth)*np.var(firms.networth)*0.25, 3)
+    x2, smoothNetworth = spline(firms.output, \
+        len(firms.output)*np.var(firms.output)*0.17, 3)
     normalizedNetworth = normalize(smoothNetworth)
 
     print("Plotting normalized output and normalized smooth output")
-    nw = normalize(firms.networth)
-    plt.plot(nw)
-    plt.plot(x2, normalizedNetworth)
+    nw = normalize(firms.output)
+    plt.plot(np.linspace(200,1000, len(nw)), nw)
+    plt.plot(x2+200, normalizedNetworth)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     plt.show()
 
     # calculate plt.xcorr
@@ -168,11 +170,11 @@ def findCorrelations(firms, x):
     smoothX = normalize(smoothX)
 
     # Calculate correlations of leverage with other features
-    corrArray = np.zeros((8,4799))
+    corrArray = np.zeros((8,5999))
     j = 0
     for data in features:
         smoothData = spline(data, \
-            len(data)*np.var(data)*0.2, 3)[1]
+            len(data)*np.var(data)*0.17, 3)[1]
         smoothData = normalize(smoothData)
         corr = np.correlate(smoothData, smoothX, "full")
         corr /= np.sqrt(np.dot(smoothData, smoothData) * \
@@ -202,31 +204,37 @@ def findStationaryPoints(data):
     return stationaryPoints
 
 def montecarlo():
-    
-    simulations = glob.glob("results/*_var02/")
+
+    simFolders = "results/*_var02/"
+    simulations = glob.glob(simFolders)
     if not simulations:
         print("No result files to analyze")
         return
 
+    print("Analysing " + str(len(simulations)) + " results from " + str(simFolders))
+
     # Collect data of many simulations
-    aggregateCorrelations = np.zeros((len(simulations), 8, 4799)) # correlation vectors of leverage vs 8 features
+    aggregateCorrelations = np.zeros((len(simulations), 8, 5999)) # correlation vectors of leverage vs 8 features
     aggregateCrises = np.zeros((len(simulations), 2)) # for each simulation stores number of crises and there size
+    aggregateOutput = np.zeros((len(simulations), 1000))
     i = 0
     for folder in simulations:
         firms, banks, individualfirm, economy, parameters  = openSimulationFiles(folder)
+
+        aggregateOutput[i] = firms.output
 
         # Store correlation values in array
         aggregateCorrelations[i] = findCorrelations(firms, economy.leverage)
 
         # Find boom and busts of economy
-        x, smoothLeverage = spline(firms.output, \
+        x, smoothOutput = spline(firms.output, \
                 len(firms.output)*np.var(firms.output)*0.15, 3)
-        sp = findStationaryPoints(np.gradient(smoothLeverage))
+        sp = findStationaryPoints(np.gradient(smoothOutput))
         crisesSize = np.zeros(len(sp))
         index = 0
         for p in sp:
             if p != sp[0]: # skip first
-                crisesSize[index] = np.fabs(smoothLeverage[p] - smoothLeverage[previous])
+                crisesSize[index] = np.fabs(smoothOutput[p] - smoothOutput[previous])
             previous = p
             index += 1
 
@@ -235,6 +243,15 @@ def montecarlo():
         i += 1
 
     meanCorr = np.mean(aggregateCorrelations, axis=0)
+
+    meanOutput = np.median(aggregateOutput, axis=0)
+    stdOutput = np.std(aggregateOutput, axis=0)
+    plt.plot(meanOutput, c='b')
+    plt.plot(meanOutput + stdOutput, dashes=[2,2], c='b')
+    plt.plot(meanOutput - stdOutput, dashes=[2,2], c='b')
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.show()
 
     print("Max and Min correlations with leverage vs features")
     for i in meanCorr:
@@ -246,6 +263,9 @@ def montecarlo():
 
     print("Average crises size")
     print(np.mean(aggregateCrises, axis=0)[1])
+    print("Average percentage GDP loss during crisis")
+    gdpLoss = np.mean(aggregateCrises, axis=1) / np.mean(aggregateOutput, axis=1)
+    print(np.mean(gdpLoss))
 
 def classify(key):
 
