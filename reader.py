@@ -118,8 +118,11 @@ def tempAnalysis():
 
     print("Plotting normalized output and normalized smooth output")
     nw = normalize(firms.output)
+    sp, spTypes = findStationaryPoints(np.gradient(smoothNetworth))
     plt.plot(np.linspace(200,1000, len(nw)), nw)
-    plt.plot(x2+200, normalizedNetworth)
+    x2 = x2 + 200
+    plt.plot(x2, normalizedNetworth)
+    plt.scatter(x2[sp], normalizedNetworth[sp], c='r', zorder=3)
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     plt.show()
@@ -384,7 +387,7 @@ def openSimulationFiles(folder):
     try:
         with open(folder + "aggregateResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = np.array(list(reader)[1:], dtype=float) # ignore first 300 lines
+            lines = np.array(list(reader)[201:], dtype=float) # ignore first 300 lines
             firms.output = lines.transpose()[0] # sum of total firm output at each step
             firms.capital = lines.transpose()[1] # sum of total firm capital at each step
             firms.price = lines.transpose()[2] # average firm price at each step
