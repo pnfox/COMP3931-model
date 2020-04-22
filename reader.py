@@ -186,22 +186,23 @@ def findCorrelations(firms, x):
     return corrArray
 
 #
-# Returns the indices where stationaryPoints occur in data
+# Returns the indices where stationaryPoints occur in data and
+# the type stationary point, -1 for maximum, 1 for minimum
 #
 def findStationaryPoints(data):
     stationaryPoints = np.array([], dtype=int)
-    diff = np.fabs(np.diff(data))
-    avgDiff = np.mean(diff)
-    variance = np.var(diff)
+    pointType = np.array([], dtype=int)
+    diff = np.diff(data)
     index = 0
     for i in data:
         if index == len(data)-1:
             continue
         if data[index]*data[index+1] < 0:
             stationaryPoints = np.append(stationaryPoints, index)
+            pointType = np.append(pointType, -1 if diff[index]<0 else 1)
         index += 1
 
-    return stationaryPoints
+    return stationaryPoints, pointType
 
 def montecarlo():
 
@@ -229,7 +230,7 @@ def montecarlo():
         # Find boom and busts of economy
         x, smoothOutput = spline(firms.output, \
                 len(firms.output)*np.var(firms.output)*0.15, 3)
-        sp = findStationaryPoints(np.gradient(smoothOutput))
+        sp, spType = findStationaryPoints(np.gradient(smoothOutput))
         crisesSize = np.zeros(len(sp))
         index = 0
         for p in sp:
@@ -238,8 +239,14 @@ def montecarlo():
             previous = p
             index += 1
 
+        if spType[0] < 0: # if first stationary point was maximum
+            meanBoom = np.mean(crisesSize[::1])
+            meanBust = np.mean(crisesSize[::2])
+        else: # if first stationary point was minimum
+            meanBoom = np.mean(crisesSize[::2])
+            meanBust = np.mean(crisesSize[::1])
         aggregateCrises[i][0] = len(sp)
-        aggregateCrises[i][1] = np.mean(crisesSize)
+        aggregateCrises[i][1] = meanBust
         i += 1
 
     meanCorr = np.mean(aggregateCorrelations, axis=0)
@@ -261,7 +268,7 @@ def montecarlo():
     print(np.mean(aggregateCrises, axis=0)[0], np.std(aggregateCrises, axis=0)[0])
     print(np.amin(aggregateCrises, axis=0)[0], np.amax(aggregateCrises, axis=0)[0])
 
-    print("Average crises size")
+    print("Average crises (busts) size")
     print(np.mean(aggregateCrises, axis=0)[1])
     print("Average percentage GDP loss during crisis")
     gdpLoss = np.mean(aggregateCrises, axis=1) / np.mean(aggregateOutput, axis=1)
@@ -451,6 +458,7 @@ def selectResults(files):
 def executeCommand(cmd):
     cmd = cmd.split(" ")
 
+    global firms, banks, individualfirm, economy, parameters
     args = ""
     if cmd[0] == "classify":
         try:
@@ -474,7 +482,6 @@ def executeCommand(cmd):
         if choice > len(folders) or choice < 0:
             return
         print("Opening results from " + folders[choice])
-        global firms, banks, individualfirm, economy, parameters
         firms, banks, individualfirm, economy, parameters = openSimulationFiles(folders[choice])
 
     if cmd[0] == "plot":
