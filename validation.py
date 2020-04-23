@@ -1,12 +1,14 @@
 import csv
+import sys
 
 def getGDPValidationData(fileName):
     try:
         data = open(fileName)
         reader = csv.reader(data)
         lines = list(reader)
-    except IOError:
-        raise Exception("Please give a valid validation csv file")
+    except FileNotFoundError:
+        print("File not found")
+        return
 
     ukGDP = []; spainGDP = []; franceGDP = []
     for l in lines:
@@ -25,4 +27,28 @@ def getGDPValidationData(fileName):
             elif "Spain" in l[1]:
                 spainGDP.append(float(gdp))
 
-    return ukGDP, franceGDP, spainGDP
+    time = open("validation/GDP/namq_10_gdp_Label.csv")
+    lines = list(time)
+
+    timeStamps = []
+    timeStampsFound = False
+    for l in lines:
+        if "TIME" in l:
+            timeStampsFound = True
+            continue
+        if timeStampsFound:
+            ts = l.split("\"")
+            if len(ts) < 2:
+                timeStampsFound = False
+            else:
+                timeStamps.append(ts[1])
+
+    return timeStamps, ukGDP, franceGDP, spainGDP
+
+if __name__=="__main__":
+    if len(sys.argv) != 2:
+        print("Please provide filename")
+        sys.exit(0)
+
+    fileName = sys.argv[1]
+    time, uk, france, spain = getGDPValidationData(fileName)
