@@ -1,3 +1,5 @@
+import numpy as np
+import matplotlib.pyplot as plt
 import csv
 import sys
 
@@ -52,3 +54,37 @@ if __name__=="__main__":
 
     fileName = sys.argv[1]
     time, uk, france, spain = getGDPValidationData(fileName)
+    plt.plot(time, france)
+    plt.xticks(rotation=90)
+    plt.title("France GDP")
+    plt.show()
+    
+    ukChange = []; spainChange = []; franceChange = []
+    # measure average GDP ukChange
+    for i in range(len(uk)):
+        if i == 0:
+            continue
+
+        ukC = uk[i]/uk[i-1]
+        spainC = spain[i]/spain[i-1]
+        franceC = france[i]/france[i-1]
+        ukChange.append(ukC)
+        spainChange.append(spainC)
+        franceChange.append(franceC)
+
+    i = 0
+    for change in [ukChange, spainChange, franceChange]:
+        print("")
+        if i == 0:
+            print("======== UK ========")
+        if i == 1:
+            print("======== Spain =========")
+        if i == 2:
+            print("======== France =========")
+        print("Mean and standard deviation GDP change")
+        print(np.mean(change) - 1)
+        print(np.std(change))
+        print("Max and min GDP change")
+        print(np.amax(change), time[np.where(change == np.amax(change))[0][0]])
+        print(np.amin(change), time[np.where(change == np.amin(change))[0][0]])
+        i += 1
