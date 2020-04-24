@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import csv
 import sys
 
-def getGDPValidationData(fileName):
+def getEuroStatData():
     try:
-        data = open(fileName)
+        data = open("validation/GDP/Eurostat/namq_10_gdp_1_Data.csv")
         reader = csv.reader(data)
         lines = list(reader)
     except FileNotFoundError:
@@ -29,7 +29,7 @@ def getGDPValidationData(fileName):
             elif "Spain" in l[1]:
                 spainGDP.append(float(gdp))
 
-    time = open("validation/GDP/namq_10_gdp_Label.csv")
+    time = open("validation/GDP/Eurostat/namq_10_gdp_Label.csv")
     lines = list(time)
 
     timeStamps = []
@@ -47,18 +47,26 @@ def getGDPValidationData(fileName):
 
     return timeStamps, ukGDP, franceGDP, spainGDP
 
-if __name__=="__main__":
-    if len(sys.argv) != 2:
-        print("Please provide filename")
-        sys.exit(0)
+def getOECDData():
+    try:
+        data = open("validation/GDP/OECD/DP_LIVE_23042020223727726.csv")
+        reader = csv.reader(data)
+        lines = list(reader)
+    except FileNotFoundError:
+        print("File not found")
+        return
 
-    fileName = sys.argv[1]
-    time, uk, france, spain = getGDPValidationData(fileName)
-    plt.plot(time, france)
-    plt.xticks(rotation=90)
-    plt.title("France GDP")
-    plt.show()
-    
+    change = []
+    for l in lines:
+        if "GBR" == l[0]:
+            c = float(l[-2])
+            change.append(c)
+
+    print(np.mean(change)/100)
+
+if __name__=="__main__":
+
+    time, uk, france, spain = getEuroStatData()
     ukChange = []; spainChange = []; franceChange = []
     # measure average GDP ukChange
     for i in range(len(uk)):
@@ -88,3 +96,5 @@ if __name__=="__main__":
         print(np.amax(change), time[np.where(change == np.amax(change))[0][0]])
         print(np.amin(change), time[np.where(change == np.amin(change))[0][0]])
         i += 1
+
+    getOECDData()
