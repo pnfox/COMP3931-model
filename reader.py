@@ -118,7 +118,7 @@ def tempAnalysis():
 
     print("Plotting normalized output and normalized smooth output")
     nw = normalize(firms.output)
-    sp, spTypes = findStationaryPoints(np.gradient(smoothNetworth))
+    sp, spTypes = findStationaryPoints(smoothNetworth)
     plt.plot(np.linspace(200,1000, len(nw)), nw)
     x2 = x2 + 200
     plt.plot(x2, normalizedNetworth)
@@ -173,7 +173,7 @@ def findCorrelations(firms, x):
     smoothX = normalize(smoothX)
 
     # Calculate correlations of leverage with other features
-    corrArray = np.zeros((8,5999))
+    corrArray = np.zeros((8,4799))
     j = 0
     for data in features:
         smoothData = spline(data, \
@@ -193,17 +193,33 @@ def findCorrelations(firms, x):
 # the type stationary point, -1 for maximum, 1 for minimum
 #
 def findStationaryPoints(data):
+    ddata = np.gradient(data)
     stationaryPoints = np.array([], dtype=int)
     pointType = np.array([], dtype=int)
-    diff = np.diff(data)
+    diff = np.diff(ddata) # data[i] - data[i-1]
     index = 0
-    for i in data:
-        if index == len(data)-1:
+    for i in ddata:
+        if index == len(ddata)-1:
             continue
-        if data[index]*data[index+1] < 0:
+        if ddata[index]*ddata[index+1] < 0:
             stationaryPoints = np.append(stationaryPoints, index)
             pointType = np.append(pointType, -1 if diff[index]<0 else 1)
         index += 1
+
+    # remove saddle points
+    # by seeing how close they are
+    index = 0
+    for p in stationaryPoints:
+        if index != 0: # skip first
+            pL = ((data[p] - data[previous]) / data[previous] ) * 100
+            if pL > -0.1 and pL < 0.1: # reject small stationary Points less than 1 percent change
+                 stationaryPoints = np.delete(stationaryPoints, index)
+                 pointType = np.delete(pointType, index)
+                 index -= 1
+                 continue
+        previous = p
+        index += 1
+    
 
     return stationaryPoints, pointType
 
@@ -216,16 +232,22 @@ def montecarlo():
         return
 
     print("Analysing " + str(len(simulations)) + " results from " + str(simFolders))
+    print("===========================")
 
     # Collect data of many simulations
-    aggregateCorrelations = np.zeros((len(simulations), 8, 5999)) # correlation vectors of leverage vs 8 features
-    aggregateCrises = np.zeros((len(simulations), 2)) # for each simulation stores number of crises and there size
-    aggregateOutput = np.zeros((len(simulations), 1000))
+    aggregateCorrelations = np.zeros((len(simulations), 8, 4799)) # correlation vectors of leverage vs 8 features
+    aggregateCrises = np.zeros((len(simulations), 3)) # for each simulation stores number of crises and there size
+    aggregateOutput = np.zeros((len(simulations), 800))
+    change = np.zeros((len(simulations), 799))
+    allCrisesLoss = np.array([])
     i = 0
     for folder in simulations:
+
         firms, banks, individualfirm, economy, parameters  = openSimulationFiles(folder)
 
         aggregateOutput[i] = firms.output
+
+        change[i] = (np.diff(firms.output) / firms.output[:-1]) * 100
 
         # Store correlation values in array
         aggregateCorrelations[i] = findCorrelations(firms, economy.leverage)
@@ -233,15 +255,23 @@ def montecarlo():
         # Find boom and busts of economy
         x, smoothOutput = spline(firms.output, \
                 len(firms.output)*np.var(firms.output)*0.15, 3)
-        sp, spType = findStationaryPoints(np.gradient(smoothOutput))
+
+        sp, spType = findStationaryPoints(smoothOutput)
         crisesSize = np.zeros(len(sp))
+        percentLoss = np.zeros(len(sp))
         index = 0
         for p in sp:
-            if p != sp[0]: # skip first
-                crisesSize[index] = np.fabs(smoothOutput[p] - smoothOutput[previous])
+            if index != 0: # skip first
+                cS = np.fabs(smoothOutput[p] - smoothOutput[previous])
+                pL = ((smoothOutput[p] - smoothOutput[previous]) / smoothOutput[previous] ) * 100
+                crisesSize[index] = cS
+                percentLoss[index] = pL
             previous = p
             index += 1
+        crisesSize = crisesSize[1:]
+        percentLoss = percentLoss[1:]
 
+        allCrisesLoss = np.append(allCrisesLoss, percentLoss)
         if spType[0] < 0: # if first stationary point was maximum
             meanBoom = np.mean(crisesSize[::1])
             meanBust = np.mean(crisesSize[::2])
@@ -250,8 +280,12 @@ def montecarlo():
             meanBust = np.mean(crisesSize[::1])
         aggregateCrises[i][0] = len(sp)
         aggregateCrises[i][1] = meanBust
+        aggregateCrises[i][2] = np.mean(percentLoss)
         i += 1
 
+    plt.hist(allCrisesLoss, bins=200) # shows the size of crises our findStationaryPoints is capturing
+    plt.title("Distribution of all crises change")
+    plt.show()
     meanCorr = np.mean(aggregateCorrelations, axis=0)
 
     meanOutput = np.median(aggregateOutput, axis=0)
@@ -263,19 +297,31 @@ def montecarlo():
     plt.yticks(fontsize=14)
     plt.show()
 
+    plt.hist(aggregateCrises[:,2], bins=40)
+    plt.title("Distribution of average % change of crises")
+    plt.show()
+
     print("Max and Min correlations with leverage vs features")
     for i in meanCorr:
         print(np.amax(i), np.amin(i))
+    print("")
 
     print("Average & variance of number of boom and busts")
     print(np.mean(aggregateCrises, axis=0)[0], np.std(aggregateCrises, axis=0)[0])
     print(np.amin(aggregateCrises, axis=0)[0], np.amax(aggregateCrises, axis=0)[0])
 
     print("Average crises (busts) size")
-    print(np.mean(aggregateCrises, axis=0)[1])
+    print(np.mean(aggregateCrises, axis=0)[1]) # average of simulations bust size
     print("Average percentage GDP loss during crisis")
-    gdpLoss = np.mean(aggregateCrises, axis=1) / np.mean(aggregateOutput, axis=1)
-    print(np.mean(gdpLoss))
+    print("Use this values to check against 2007Q4 and 2008Q1")
+    print(np.mean(aggregateCrises, axis=0)[2])
+    print(np.std(aggregateCrises, axis=0)[2])
+    print("Average percentage GDP change")
+    plt.hist(np.mean(change, axis=0), bins=40)
+    plt.title("Distribution of average % change")
+    plt.show()
+    print(np.std(change))
+    print(np.amax(change), np.amin(change))
 
 def classify(key):
 
@@ -290,8 +336,8 @@ def classify(key):
         time = np.linspace(0, len(firms.output), num=len(firms.output)-1)
         p = np.stack((time, firms.output[1:]), axis=-1)
         interpolatedPoints = analyse.splineData(p)
-        ddy = np.gradient(np.gradient(interpolatedPoints[:,1]))
-        stationaryPoints = analyse.findStationaryPoints(ddy)
+        dy = np.gradient(interpolatedPoints[:,1])
+        stationaryPoints = analyse.findStationaryPoints(dy)
         change = analyse.outputVolatility(firms)
 
         Y = np.append(Y, float(paramters.get(key)))

@@ -56,18 +56,30 @@ def getOECDData():
         print("File not found")
         return
 
-    change = []
+    timeStamps = []
+    ukChange = []; spainChange = []; usaChange = []; germanyChange = []
     for l in lines:
         if "GBR" == l[0]:
+            time = l[-3]
+            timeStamps.append(time)
             c = float(l[-2])
-            change.append(c)
+            ukChange.append(c)
+        if "ESP" == l[0]:
+            c = float(l[-2])
+            spainChange.append(c)
+        if "USA" == l[0]:
+            c = float(l[-2])
+            usaChange.append(c)
+        if "DEU" == l[0]: # germany
+            c = float(l[-2])
+            germanyChange.append(c)
 
-    print(np.mean(change)/100)
+    return timeStamps, ukChange, spainChange, usaChange, germanyChange
 
 if __name__=="__main__":
 
     time, uk, france, spain = getEuroStatData()
-    ukChange = []; spainChange = []; franceChange = []
+    ukChange = []; spainChange = []; franceChange = []; usaChange = []; germanyChange = []
     # measure average GDP ukChange
     for i in range(len(uk)):
         if i == 0:
@@ -97,4 +109,9 @@ if __name__=="__main__":
         print(np.amin(change), time[np.where(change == np.amin(change))[0][0]])
         i += 1
 
-    getOECDData()
+    time, ukChange, spainChange, usaChange, germanyChange = getOECDData()
+    print("")
+    print("===== OECD Dataset =====")
+    print("Uk change: ", np.mean(ukChange))
+    print("Spain change: ", np.mean(spainChange))
+    print("USA change: ", np.mean(usaChange))
