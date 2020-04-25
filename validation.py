@@ -58,6 +58,7 @@ def getOECDData():
 
     timeStamps = []
     ukChange = []; spainChange = []; usaChange = []; germanyChange = []
+    koreaChange = []; australiaChange = []; icelandChange = []; denmarkChange = []
     for l in lines:
         if "GBR" == l[0]:
             time = l[-3]
@@ -73,8 +74,39 @@ def getOECDData():
         if "DEU" == l[0]: # germany
             c = float(l[-2])
             germanyChange.append(c)
+        if "KOR" == l[0]:
+            c = float(l[-2])
+            koreaChange.append(c)
+        if "AUS" == l[0]:
+            c = float(l[-2])
+            australiaChange.append(c)
+        if "ISL" == l[0]:
+            c = float(l[-2])
+            icelandChange.append(c)
+        if "DNK" == l[0]:
+            c = float(l[-2])
+            denmarkChange.append(c)
 
     return timeStamps, ukChange, spainChange, usaChange, germanyChange
+    #return timeStamps, koreaChange, australiaChange, icelandChange, denmarkChange
+
+def getTime(time, date):
+    index = 0
+    for i in time:
+        if i == date:
+            return index
+        index += 1
+
+    return -1
+
+def totalChange(change):
+    x = 100
+    finalX = x
+    for i in change:
+        finalX *= (1+0.01*i)
+    finalChange = ( (finalX - x) / x ) * 100
+
+    return finalChange
 
 if __name__=="__main__":
 
@@ -85,9 +117,9 @@ if __name__=="__main__":
         if i == 0:
             continue
 
-        ukC = uk[i]/uk[i-1]
-        spainC = spain[i]/spain[i-1]
-        franceC = france[i]/france[i-1]
+        ukC = ((uk[i]-uk[i-1])/uk[i-1]) * 100
+        spainC = ((spain[i]-spain[i-1])/spain[i-1]) * 100
+        franceC = ((france[i]-france[i-1])/france[i-1]) * 100
         ukChange.append(ukC)
         spainChange.append(spainC)
         franceChange.append(franceC)
@@ -110,8 +142,23 @@ if __name__=="__main__":
         i += 1
 
     time, ukChange, spainChange, usaChange, germanyChange = getOECDData()
+    plt.plot(ukChange, label="uk")
+    plt.plot(spainChange, label="spn")
+    plt.plot(usaChange, label="usa")
+    plt.plot(time, germanyChange, label="ger")
+    plt.xticks(rotation=90)
+    plt.legend()
+    plt.show()
+
     print("")
     print("===== OECD Dataset =====")
     print("Uk change: ", np.mean(ukChange))
     print("Spain change: ", np.mean(spainChange))
     print("USA change: ", np.mean(usaChange))
+
+    t = getTime(time, "2008-Q2")
+    t2 = getTime(time, "2009-Q1")
+    print("Overall change UK 2007Q4 - 2009Q4", totalChange(ukChange[t:t2]))
+    print("Overall change UK 2007Q4 - 2009Q4", totalChange(spainChange[t:t2]))
+    print("Overall change UK 2007Q4 - 2009Q4", totalChange(usaChange[t:t2]))
+    print("Overall change UK 2007Q4 - 2009Q4", totalChange(germanyChange[t:t2]))

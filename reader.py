@@ -8,6 +8,7 @@ from matplotlib import colors
 import matplotlib.pyplot as plt
 import agents
 import analyse
+import validation
 from scipy.interpolate import splev, splrep
 from scipy import stats
 
@@ -237,9 +238,9 @@ def montecarlo():
 
     # Collect data of many simulations
     aggregateCorrelations = np.zeros((len(simulations), 8, 4799)) # correlation vectors of leverage vs 8 features
-    aggregateCrises = np.zeros((len(simulations), 3)) # for each simulation stores number of crises and there size
+    aggregateCrises = np.zeros((len(simulations), 4)) # for each simulation stores number of crises and there size
     aggregateOutput = np.zeros((len(simulations), 800))
-    change = np.zeros((len(simulations), 799))
+    change = np.zeros((len(simulations), 49))
     allCrisesLoss = np.array([])
     i = 0
     for folder in simulations:
@@ -248,7 +249,8 @@ def montecarlo():
 
         aggregateOutput[i] = firms.output
 
-        change[i] = (np.diff(firms.output) / firms.output[:-1]) * 100
+        quarterlyOutput = firms.output[np.arange(0, len(firms.output), len(firms.output)/50, dtype=int)]
+        change[i] = (np.diff(quarterlyOutput) / quarterlyOutput[:-1]) * 100
 
         # Store correlation values in array
         aggregateCorrelations[i] = findCorrelations(firms, economy.leverage)
@@ -282,6 +284,7 @@ def montecarlo():
         aggregateCrises[i][0] = len(sp)
         aggregateCrises[i][1] = meanBust
         aggregateCrises[i][2] = np.mean(percentLoss)
+        aggregateCrises[i][3] = np.std(percentLoss)
         i += 1
 
     plt.hist(allCrisesLoss, bins=200) # shows the size of crises our findStationaryPoints is capturing
@@ -315,14 +318,42 @@ def montecarlo():
     print(np.mean(aggregateCrises, axis=0)[1]) # average of simulations bust size
     print("Average percentage GDP loss during crisis")
     print("Use this values to check against 2007Q4 and 2008Q1")
-    print(np.mean(aggregateCrises, axis=0)[2])
-    print(np.std(aggregateCrises, axis=0)[2])
+    print(np.mean(allCrisesLoss))
+    print(np.std(allCrisesLoss))
+    print(np.mean(aggregateCrises[:,3]))
+    print(np.std(aggregateCrises[:,3])) # if this is low then our simulations are consistent in variation of crises
     print("Average percentage GDP change")
     plt.hist(np.mean(change, axis=0), bins=40)
-    plt.title("Distribution of average % change")
+    plt.title("Distribution of average quarterly % change")
     plt.show()
+    allChanges = np.reshape(change, (400*49))
+    plt.hist(allChanges, bins=200)
+    plt.title("Distribution of quarterly all % change")
+    plt.show()
+    print(np.mean(change) == np.mean(np.mean(change, axis=0)))
+    print(np.mean(change) == np.mean(allChanges))
     print(np.std(change))
     print(np.amax(change), np.amin(change))
+
+    # see if quarterly change of countries is comparable to each simulation
+    time, uk, spain, usa, germany = validation.getOECDData()
+    for dataset in [uk, spain, usa, germany]:
+        tests = []
+        for i in change:
+            t = stats.ks_2samp(dataset, i) # uk quarterly %change compare with first sim
+            if t[1] < 0.1 and t[0] > 0.217:
+                tests.append(t[0])
+        print(len(tests))
+        print(np.mean(tests))
+   
+    print("-------")
+    print("Check GDP loss 2007-Q4 till 2008-Q3")
+    t = validation.getTime(time, "2008-Q2")
+    t2 = validation.getTime(time, "2009-Q1")
+    for dataset in [uk, spain, usa, germany]:
+        totalChange = validation.totalChange(dataset[t:t2])
+        print(totalChange)
+
 
 def classify(key):
 
