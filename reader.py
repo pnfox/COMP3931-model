@@ -196,14 +196,15 @@ def findStationaryPoints(data):
     ddata = np.gradient(data)
     stationaryPoints = np.array([], dtype=int)
     pointType = np.array([], dtype=int)
-    diff = np.diff(ddata) # data[i] - data[i-1]
+    diff = np.gradient(ddata) # data[i] - data[i-1]
     index = 0
     for i in ddata:
         if index == len(ddata)-1:
             continue
         if ddata[index]*ddata[index+1] < 0:
+            pT = -1 if diff[index]<0 else 1
             stationaryPoints = np.append(stationaryPoints, index)
-            pointType = np.append(pointType, -1 if diff[index]<0 else 1)
+            pointType = np.append(pointType, pT)
         index += 1
 
     # remove saddle points
