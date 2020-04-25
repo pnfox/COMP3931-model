@@ -76,13 +76,13 @@ optional arguments:
 ```
 
 Analysis tools are provided by the `reader.py` script.
-This will search for saved simulations in the `results/` directory.
 Simply run the following to launch these tools:
 
 ```python reader.py```
 
 This will bring us into the analysis shell, run `help` in here to see
-what commands are available.
+what commands are available. On launching the tools, saved simulations
+are searched for in the in the `results/` directory.
 
 ### Dependencies
 

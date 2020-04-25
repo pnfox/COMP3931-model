@@ -126,7 +126,7 @@ class Simulation:
                 oldInterest = self.banks.interestRate[currentBank[0]]
 
             # compare old bank with new
-            if (newInterest < oldInterest):
+            if ( newInterest < oldInterest ):
                 # log change in firm-bank relationship
                 self.changeFB[time] = self.changeFB[time] + 1
 
@@ -477,12 +477,6 @@ class Simulation:
         d = []
         for t in range(self.time):
             self.currentStep = t
-            # replace defaulted firms and banks
-            try:
-                self.replaceDefaults()
-            except Exception as e:
-                print("Problem with replacing defaulted firms")
-                print(e)
 
             # update banks interest rates
             self.updateInterestRates()
@@ -504,8 +498,6 @@ class Simulation:
 
             # update price
             self.updateFirmPrice()
-
-            # find best firm
 
             # compute interest rate charged to firms
             self.updateFirmInterestRate()
@@ -532,25 +524,32 @@ class Simulation:
                 print("Time: ", t)
                 self.interactiveShell()
 
-            if t > 300 and t%2 == 0:
-                data = self.firms.networth[self.firms.networth > 0]
-                MLE = stats.genpareto.fit(data)
-                dvalue, pvalue = stats.kstest(data, 'genpareto', args=MLE)
-                p.append(pvalue)
-                d.append(dvalue)
+            # replace defaulted firms and banks
+            try:
+                self.replaceDefaults()
+            except Exception as e:
+                print("Problem with replacing defaulted firms")
+                print(e)
+
+        #    if t > 300 and t%2 == 0:
+        #        data = self.firms.networth[self.firms.networth > 0]
+        #        MLE = stats.genpareto.fit(data)
+        #        dvalue, pvalue = stats.kstest(data, 'genpareto', args=MLE)
+        #        p.append(pvalue)
+        #        d.append(dvalue)
 
         self.saveResults()
 
         #
         # Check firm wealth follows power law
         #
-        data = self.firms.networth[self.firms.networth > 0]
-        infoFile = open(self.outputFolder + "INFO", "a")
-        criticalValue = 1.36 / np.sqrt(len(data))
-        infoFile.write("KS test: " + str(np.mean(d)) + ", " + str(np.mean(p)) + "\n")
-        infoFile.write("Critical Value 95% confidence: " + str(criticalValue) + "\n")
-        if np.mean(d) < criticalValue:
-            infoFile.write("Firm networth Follows pareto distribution\n")
-        else:
-            infoFile.write("Rejected null hypothesis - not pareto distribution\n")
-        infoFile.close()
+        #data = self.firms.networth[self.firms.networth > 0]
+        #infoFile = open(self.outputFolder + "INFO", "a")
+        #criticalValue = 1.36 / np.sqrt(len(data))
+        #infoFile.write("KS test: " + str(np.mean(d)) + ", " + str(np.mean(p)) + "\n")
+        #infoFile.write("Critical Value 95% confidence: " + str(criticalValue) + "\n")
+        #if np.mean(d) < criticalValue:
+        #    infoFile.write("Firm networth Follows pareto distribution\n")
+        #else:
+        #    infoFile.write("Rejected null hypothesis - not pareto distribution\n")
+        #infoFile.close()

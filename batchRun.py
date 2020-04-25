@@ -3,9 +3,9 @@ import threading
 import time
 
 def thread_function(batchID, threadID):
-    adj = str(batchID)+str(threadID+2)
-    os.system("python3 main.py -s 10 -t 1000 -f 500 -b 50 -var 0.15 -adj " + \
-            "0." + adj + " --output results/verylowVaradj" + adj + "/")
+    ID = str(batchID)+str(threadID+2)
+    os.system("python3 main.py -s " + ID + " -t 1000 -f 500 -b 50 -var 0.2 " + \
+            " --output results/" + ID + "_var02" + "/")
 
 # Runs many simulation in parallel
 def batchRun(n):
@@ -20,5 +20,5 @@ def batchRun(n):
 
 if __name__=="__main__":
     
-    for i in range(2):
-        batchRun(i)
+    for i in range(100):
+        batchRun(i+1)

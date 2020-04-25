@@ -8,6 +8,7 @@ from matplotlib import colors
 import matplotlib.pyplot as plt
 import agents
 import analyse
+import validation
 from scipy.interpolate import splev, splrep
 from scipy import stats
 
@@ -40,44 +41,319 @@ def plot(data, data2=None, data3=None, data4=None, title=""):
         print("Error plot: data must be passed to function")
         return
 
-def pearCoeffs(x,y, stepsize):
-    index = 0
+def multiplot(firms, banks):
+    plt.plot(firms.output, linewidth=2)
+    plt.savefig("../COMP3931-report/images/firmoutput.png", bbox_inches = 'tight',
+    pad_inches = 0)
+    plt.clf()
+    plt.plot(firms.debt, linewidth=2)
+    plt.savefig("../COMP3931-report/images/firmdebt.png", bbox_inches = 'tight',
+    pad_inches = 0)
+    plt.clf()
+    plt.plot(firms.price)
+    #plt.hist(firms.price, bins=40)
+    plt.savefig("../COMP3931-report/images/firmprice.png", bbox_inches = 'tight',
+    pad_inches = 0)
+    plt.clf()
+    plt.plot(banks.networth, linewidth=2)
+    plt.savefig("../COMP3931-report/images/banknetworth.png", bbox_inches = 'tight',
+    pad_inches = 0)
+    plt.clf()
+
+def pearCoeffs(x,y, stepsize, a):
+    index = a
     pearson = []
     domain = []
     for i in range(len(y)-stepsize):
         p = stats.pearsonr(x[i:stepsize+i], y[i:stepsize+i])
-        if p[1] < 0.2:
+        if p[1] < 0.05:
             pearson.append(p[0])
             domain.append(index)
-        index += 1
+        index += a
 
     return domain, pearson
 
+def spline(data, smooth=2, scale=1):
+    x = np.linspace(0, len(data), num=len(data))
+    spline = splrep(x, data, k=3, s=smooth)
+    x = np.linspace(0, len(data), int(len(data)*scale)) # if this x has more than len(data) lots of pearson oscillation
+    return x, splev(x, spline)
+
+def normalize(data):
+    data = (data - np.mean(data)) / np.std(data)
+    return data
+
 def tempAnalysis():
-    y = firms.output
-    time = np.linspace(0, len(y), num=len(y))
 
-    spline = splrep(time, y, k=3, s=25)
-    x = np.linspace(0, len(y), int(len(y)/6))
-    y2 = splev(x, spline)
+    # magic algorithm that transforms data into more useful stuff
+    # hopefully this makes cycles more clear
+    x, smoothLeverage = spline(economy.leverage, \
+            len(economy.leverage)*np.var(economy.leverage)*0.6, 3)
+    #smoothLeverage = np.gradient(smoothLeverage)
 
-    plt.plot(y, label='Firm output')
-    plt.plot(x, y2, label='splines')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-
-
-    fig, ax = plt.subplots(2,1, sharex=True)
-    ax[0].plot(x, y2, label='splines')
-    ax[0].legend()
+    # plot algorithm output
+    fig,ax = plt.subplots(3,1,sharex=True)
+    ax[0].plot(banks.profit)
+    ax[0].set_title("Economy output")
     ax[0].grid(True)
-    x, pearson = pearCoeffs(economy.badDebtAsGDP, economy.leverage, 15)
-    ax[1].scatter(x,pearson)
-    ax[1].set_ylim(-1,1)
+    ax[1].plot(economy.leverage)
+    ax[1].set_title("Economy leverage")
     ax[1].grid(True)
-    ax[1].set_title("Pearson correlation")
+    extend=[-0.5, 800.5, 0, 1]
+    ax[2].imshow(smoothLeverage[np.newaxis,:], cmap="plasma", aspect="auto", extent=extend)
+    ax[2].set_title("magic")
+    ax[2].grid(True)
     plt.show()
+
+    print("Plotting normalized leverage and normalized smooth leverage")
+    normalizedLeverage = normalize(economy.leverage)
+    normalizedChange = normalize(smoothLeverage)
+
+    plt.plot(normalizedLeverage)
+    plt.plot(x, normalizedChange)
+    plt.show()
+
+    x2, smoothNetworth = spline(firms.output, \
+        len(firms.output)*np.var(firms.output)*0.17, 3)
+    normalizedNetworth = normalize(smoothNetworth)
+
+    print("Plotting normalized output and normalized smooth output")
+    nw = normalize(firms.output)
+    sp, spTypes = findStationaryPoints(smoothNetworth)
+    plt.plot(np.linspace(200,1000, len(nw)), nw)
+    x2 = x2 + 200
+    plt.plot(x2, normalizedNetworth)
+    plt.scatter(x2[sp], normalizedNetworth[sp], c='r', zorder=3)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.show()
+
+    # calculate plt.xcorr
+    corr = np.correlate(normalizedNetworth, normalizedChange, "full")
+    corr /= np.sqrt(np.dot(normalizedNetworth, normalizedNetworth) * \
+            np.dot(normalizedChange, normalizedChange))
+    plt.plot(corr)
+    plt.show()
+    maxlags = 100
+    Nx = len(normalizedNetworth)
+    lags = np.arange(-maxlags, maxlags + 1)
+    correls = corr[Nx - 1 - maxlags:Nx + maxlags]
+    xspace = np.linspace(-maxlags/2, maxlags/2, len(correls))
+    plt.plot(xspace, correls)
+    plt.show()
+
+    return
+
+def tempAnalysis2():
+
+    window = 10
+    window2 = 50
+    NL = []; NL2 = []
+    for lag in range(0,100):
+        NL.append(stats.pearsonr(firms.networth[0+lag:window+lag], economy.leverage[0+lag:window+lag]))
+        NL2.append(stats.pearsonr(firms.networth[0:window2], economy.leverage[0+lag:window2+lag]))
+
+    fig, ax = plt.subplots(2,1,sharex=True)
+    ax[0].plot(NL)
+    ax[0].set_title(label="networth - leverage+ window=30")
+    ax[0].grid(True)
+    ax[1].plot(NL2)
+    ax[1].set_title(label="networth - leverage+ window=50")
+    ax[1].grid(True)
+    plt.show()
+
+# For a given simulation finds correlations of x with features
+def findCorrelations(firms, x):
+    features = [firms.output, firms.networth, firms.debt, \
+            firms.profit, firms.capital, banks.networth, \
+            banks.badDebt, banks.profit]
+
+    # Use splines to smooth randomness of data
+    smoothX = spline(x, \
+        len(x)*np.var(x)*0.6, 3)[1]
+    smoothX = normalize(smoothX)
+
+    # Calculate correlations of leverage with other features
+    corrArray = np.zeros((8,4799))
+    j = 0
+    for data in features:
+        smoothData = spline(data, \
+            len(data)*np.var(data)*0.17, 3)[1]
+        smoothData = normalize(smoothData)
+        corr = np.correlate(smoothData, smoothX, "full")
+        corr /= np.sqrt(np.dot(smoothData, smoothData) * \
+            np.dot(smoothX, smoothX))
+        #corr = stats.pearsonr(smoothData, smoothX)[1]
+        corrArray[j] = corr
+        j += 1
+
+    return corrArray
+
+#
+# Returns the indices where stationaryPoints occur in data and
+# the type stationary point, -1 for maximum, 1 for minimum
+#
+def findStationaryPoints(data):
+    ddata = np.gradient(data)
+    stationaryPoints = np.array([], dtype=int)
+    pointType = np.array([], dtype=int)
+    diff = np.gradient(ddata) # data[i] - data[i-1]
+    index = 0
+    for i in ddata:
+        if index == len(ddata)-1:
+            continue
+        if ddata[index]*ddata[index+1] < 0:
+            pT = -1 if diff[index]<0 else 1
+            stationaryPoints = np.append(stationaryPoints, index)
+            pointType = np.append(pointType, pT)
+        index += 1
+
+    # remove saddle points
+    # by seeing how close they are
+    index = 0
+    for p in stationaryPoints:
+        if index != 0: # skip first
+            pL = ((data[p] - data[previous]) / data[previous] ) * 100
+            if pL > -0.1 and pL < 0.1: # reject small stationary Points less than 1 percent change
+                 stationaryPoints = np.delete(stationaryPoints, index)
+                 pointType = np.delete(pointType, index)
+                 index -= 1
+                 continue
+        previous = p
+        index += 1
+    
+
+    return stationaryPoints, pointType
+
+def montecarlo():
+
+    simFolders = "results/*_var02/"
+    simulations = glob.glob(simFolders)
+    if not simulations:
+        print("No result files to analyze")
+        return
+
+    print("Analysing " + str(len(simulations)) + " results from " + str(simFolders))
+    print("===========================")
+
+    # Collect data of many simulations
+    aggregateCorrelations = np.zeros((len(simulations), 8, 4799)) # correlation vectors of leverage vs 8 features
+    aggregateCrises = np.zeros((len(simulations), 4)) # for each simulation stores number of crises and there size
+    aggregateOutput = np.zeros((len(simulations), 800))
+    change = np.zeros((len(simulations), 49))
+    allCrisesLoss = np.array([])
+    i = 0
+    for folder in simulations:
+
+        firms, banks, individualfirm, economy, parameters  = openSimulationFiles(folder)
+
+        aggregateOutput[i] = firms.output
+
+        quarterlyOutput = firms.output[np.arange(0, len(firms.output), len(firms.output)/50, dtype=int)]
+        change[i] = (np.diff(quarterlyOutput) / quarterlyOutput[:-1]) * 100
+
+        # Store correlation values in array
+        aggregateCorrelations[i] = findCorrelations(firms, economy.leverage)
+
+        # Find boom and busts of economy
+        x, smoothOutput = spline(firms.output, \
+                len(firms.output)*np.var(firms.output)*0.15, 3)
+
+        sp, spType = findStationaryPoints(smoothOutput)
+        crisesSize = np.zeros(len(sp))
+        percentLoss = np.zeros(len(sp))
+        index = 0
+        for p in sp:
+            if index != 0: # skip first
+                cS = np.fabs(smoothOutput[p] - smoothOutput[previous])
+                pL = ((smoothOutput[p] - smoothOutput[previous]) / smoothOutput[previous] ) * 100
+                crisesSize[index] = cS
+                percentLoss[index] = pL
+            previous = p
+            index += 1
+        crisesSize = crisesSize[1:]
+        percentLoss = percentLoss[1:]
+
+        allCrisesLoss = np.append(allCrisesLoss, percentLoss)
+        if spType[0] < 0: # if first stationary point was maximum
+            meanBoom = np.mean(crisesSize[::1])
+            meanBust = np.mean(crisesSize[::2])
+        else: # if first stationary point was minimum
+            meanBoom = np.mean(crisesSize[::2])
+            meanBust = np.mean(crisesSize[::1])
+        aggregateCrises[i][0] = len(sp)
+        aggregateCrises[i][1] = meanBust
+        aggregateCrises[i][2] = np.mean(percentLoss)
+        aggregateCrises[i][3] = np.std(percentLoss)
+        i += 1
+
+    plt.hist(allCrisesLoss, bins=200) # shows the size of crises our findStationaryPoints is capturing
+    plt.title("Distribution of all crises change")
+    plt.show()
+    meanCorr = np.mean(aggregateCorrelations, axis=0)
+
+    meanOutput = np.median(aggregateOutput, axis=0)
+    stdOutput = np.std(aggregateOutput, axis=0)
+    plt.plot(meanOutput, c='b')
+    plt.plot(meanOutput + stdOutput, dashes=[2,2], c='b')
+    plt.plot(meanOutput - stdOutput, dashes=[2,2], c='b')
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.show()
+
+    plt.hist(aggregateCrises[:,2], bins=40)
+    plt.title("Distribution of average % change of crises")
+    plt.show()
+
+    print("Max and Min correlations with leverage vs features")
+    for i in meanCorr:
+        print(np.amax(i), np.amin(i))
+    print("")
+
+    print("Average & variance of number of boom and busts")
+    print(np.mean(aggregateCrises, axis=0)[0], np.std(aggregateCrises, axis=0)[0])
+    print(np.amin(aggregateCrises, axis=0)[0], np.amax(aggregateCrises, axis=0)[0])
+
+    print("Average crises (busts) size")
+    print(np.mean(aggregateCrises, axis=0)[1]) # average of simulations bust size
+    print("Average percentage GDP loss during crisis")
+    print("Use this values to check against 2007Q4 and 2008Q1")
+    print(np.mean(allCrisesLoss))
+    print(np.std(allCrisesLoss))
+    print(np.mean(aggregateCrises[:,3]))
+    print(np.std(aggregateCrises[:,3])) # if this is low then our simulations are consistent in variation of crises
+    print("Average percentage GDP change")
+    plt.hist(np.mean(change, axis=0), bins=40)
+    plt.title("Distribution of average quarterly % change")
+    plt.show()
+    allChanges = np.reshape(change, (400*49))
+    plt.hist(allChanges, bins=200)
+    plt.title("Distribution of quarterly all % change")
+    plt.show()
+    print(np.mean(change) == np.mean(np.mean(change, axis=0)))
+    print(np.mean(change) == np.mean(allChanges))
+    print(np.std(change))
+    print(np.amax(change), np.amin(change))
+
+    # see if quarterly change of countries is comparable to each simulation
+    time, uk, spain, usa, germany = validation.getOECDData()
+    for dataset in [uk, spain, usa, germany]:
+        tests = []
+        for i in change:
+            t = stats.ks_2samp(dataset, i) # uk quarterly %change compare with first sim
+            if t[1] < 0.1 and t[0] > 0.217:
+                tests.append(t[0])
+        print(len(tests))
+        print(np.mean(tests))
+   
+    print("-------")
+    print("Check GDP loss 2007-Q4 till 2008-Q3")
+    t = validation.getTime(time, "2008-Q2")
+    t2 = validation.getTime(time, "2009-Q1")
+    for dataset in [uk, spain, usa, germany]:
+        totalChange = validation.totalChange(dataset[t:t2])
+        print(totalChange)
+
 
 def classify(key):
 
@@ -92,8 +368,8 @@ def classify(key):
         time = np.linspace(0, len(firms.output), num=len(firms.output)-1)
         p = np.stack((time, firms.output[1:]), axis=-1)
         interpolatedPoints = analyse.splineData(p)
-        ddy = np.gradient(np.gradient(interpolatedPoints[:,1]))
-        stationaryPoints = analyse.findStationaryPoints(ddy)
+        dy = np.gradient(interpolatedPoints[:,1])
+        stationaryPoints = analyse.findStationaryPoints(dy)
         change = analyse.outputVolatility(firms)
 
         Y = np.append(Y, float(paramters.get(key)))
@@ -189,7 +465,7 @@ def openSimulationFiles(folder):
     try:
         with open(folder + "aggregateResults.csv", "r") as f:
             reader = csv.reader(f)
-            lines = np.array(list(reader)[300:], dtype=float) # ignore first 300 lines
+            lines = np.array(list(reader)[201:], dtype=float) # ignore first 300 lines
             firms.output = lines.transpose()[0] # sum of total firm output at each step
             firms.capital = lines.transpose()[1] # sum of total firm capital at each step
             firms.price = lines.transpose()[2] # average firm price at each step
@@ -263,6 +539,7 @@ def selectResults(files):
 def executeCommand(cmd):
     cmd = cmd.split(" ")
 
+    global firms, banks, individualfirm, economy, parameters
     args = ""
     if cmd[0] == "classify":
         try:
@@ -277,12 +554,15 @@ def executeCommand(cmd):
         print(findSimulations(cmd[1], cmd[2]))
     if cmd[0] == "test":
         tempAnalysis()
+    if cmd[0] == "test2":
+        tempAnalysis2()
+    if cmd[0] == "monte":
+        montecarlo()
     if cmd[0] == "open":
         choice = selectResults(folders)
         if choice > len(folders) or choice < 0:
             return
         print("Opening results from " + folders[choice])
-        global firms, banks, individualfirm, economy, parameters
         firms, banks, individualfirm, economy, parameters = openSimulationFiles(folders[choice])
 
     if cmd[0] == "plot":
@@ -298,6 +578,8 @@ def executeCommand(cmd):
             return
         # if we get here cmd is valid
         exec(cmd[0] + "(" + args + ")")
+    if cmd[0] == "multiplot":
+        multiplot(firms, banks)
 
     if cmd[0] == "printparams" or cmd[0] == "params":
         for x in parameters:
