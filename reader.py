@@ -88,7 +88,7 @@ def tempAnalysis():
     # magic algorithm that transforms data into more useful stuff
     # hopefully this makes cycles more clear
     x, smoothLeverage = spline(economy.leverage, \
-            len(economy.leverage)*np.var(economy.leverage)*0.6, 3)
+            len(economy.leverage)*np.var(economy.leverage)*0.5, 3)
     #smoothLeverage = np.gradient(smoothLeverage)
 
     # plot algorithm output
@@ -114,7 +114,7 @@ def tempAnalysis():
     plt.show()
 
     x2, smoothNetworth = spline(firms.output, \
-        len(firms.output)*np.var(firms.output)*0.17, 3)
+        len(firms.output)*np.var(firms.output)*0.1, 3)
     normalizedNetworth = normalize(smoothNetworth)
 
     print("Plotting normalized output and normalized smooth output")
@@ -257,7 +257,7 @@ def montecarlo():
 
         # Find boom and busts of economy
         x, smoothOutput = spline(firms.output, \
-                len(firms.output)*np.var(firms.output)*0.15, 3)
+                len(firms.output)*np.var(firms.output)*0.1, 3)
 
         sp, spType = findStationaryPoints(smoothOutput)
         crisesSize = np.zeros(len(sp))
@@ -274,21 +274,24 @@ def montecarlo():
         crisesSize = crisesSize[1:]
         percentLoss = percentLoss[1:]
 
-        allCrisesLoss = np.append(allCrisesLoss, percentLoss)
+        allCrisesLoss = np.append(allCrisesLoss, percentLoss[percentLoss < 0])
         if spType[0] < 0: # if first stationary point was maximum
             meanBoom = np.mean(crisesSize[::1])
             meanBust = np.mean(crisesSize[::2])
         else: # if first stationary point was minimum
             meanBoom = np.mean(crisesSize[::2])
             meanBust = np.mean(crisesSize[::1])
-        aggregateCrises[i][0] = len(sp)
+        aggregateCrises[i][0] = len(percentLoss[percentLoss < 0])
         aggregateCrises[i][1] = meanBust
         aggregateCrises[i][2] = np.mean(percentLoss)
         aggregateCrises[i][3] = np.std(percentLoss)
         i += 1
 
     plt.hist(allCrisesLoss, bins=200) # shows the size of crises our findStationaryPoints is capturing
-    plt.title("Distribution of all crises change")
+    plt.ylabel("Frequency", fontsize=14)
+    plt.xlabel("% GDP change", fontsize=14)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
     plt.show()
     meanCorr = np.mean(aggregateCorrelations, axis=0)
 
@@ -301,8 +304,8 @@ def montecarlo():
     plt.yticks(fontsize=14)
     plt.show()
 
-    plt.hist(aggregateCrises[:,2], bins=40)
-    plt.title("Distribution of average % change of crises")
+    plt.hist(aggregateCrises[:,0], bins=40)
+    plt.title("Distribution of Number of Crises in Simulation")
     plt.show()
 
     print("Max and Min correlations with leverage vs features")
@@ -310,23 +313,23 @@ def montecarlo():
         print(np.amax(i), np.amin(i))
     print("")
 
-    print("Average & variance of number of boom and busts")
-    print(np.mean(aggregateCrises, axis=0)[0], np.std(aggregateCrises, axis=0)[0])
-    print(np.amin(aggregateCrises, axis=0)[0], np.amax(aggregateCrises, axis=0)[0])
-
     print("Average crises (busts) size")
-    print(np.mean(aggregateCrises, axis=0)[1]) # average of simulations bust size
+    print(np.mean(aggregateCrises[:,0])) # average of simulations bust size
+    print(np.std(aggregateCrises[:,0]))
     print("Average percentage GDP loss during crisis")
     print("Use this values to check against 2007Q4 and 2008Q1")
     print(np.mean(allCrisesLoss))
     print(np.std(allCrisesLoss))
     print(np.mean(aggregateCrises[:,3]))
     print(np.std(aggregateCrises[:,3])) # if this is low then our simulations are consistent in variation of crises
+    plt.scatter(aggregateCrises[:,2], aggregateCrises[:,3])
+    plt.show()
+    print(np.where(aggregateCrises[:,2] < 1) and np.where(aggregateCrises[:,2] > 0.5))
     print("Average percentage GDP change")
     plt.hist(np.mean(change, axis=0), bins=40)
     plt.title("Distribution of average quarterly % change")
     plt.show()
-    allChanges = np.reshape(change, (400*49))
+    allChanges = np.reshape(change, (500*49))
     plt.hist(allChanges, bins=200)
     plt.title("Distribution of quarterly all % change")
     plt.show()

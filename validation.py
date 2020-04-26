@@ -58,7 +58,7 @@ def getOECDData():
 
     timeStamps = []
     ukChange = []; spainChange = []; usaChange = []; germanyChange = []
-    koreaChange = []; australiaChange = []; icelandChange = []; denmarkChange = []
+    japanChange = []; australiaChange = []; icelandChange = []; denmarkChange = []
     for l in lines:
         if "GBR" == l[0]:
             time = l[-3]
@@ -74,9 +74,9 @@ def getOECDData():
         if "DEU" == l[0]: # germany
             c = float(l[-2])
             germanyChange.append(c)
-        if "KOR" == l[0]:
+        if "JPN" == l[0]:
             c = float(l[-2])
-            koreaChange.append(c)
+            japanChange.append(c)
         if "AUS" == l[0]:
             c = float(l[-2])
             australiaChange.append(c)
@@ -87,8 +87,44 @@ def getOECDData():
             c = float(l[-2])
             denmarkChange.append(c)
 
-    return timeStamps, ukChange, spainChange, usaChange, germanyChange
-    #return timeStamps, koreaChange, australiaChange, icelandChange, denmarkChange
+    #return timeStamps, ukChange, spainChange, usaChange, germanyChange
+    return timeStamps, japanChange, australiaChange, icelandChange, denmarkChange
+
+def get2008Crisis():
+    try:
+        data = open("validation/GDP/OECD/DP_LIVE_23042020223727726.csv")
+        reader = csv.reader(data)
+        lines = list(reader)
+    except FileNotFoundError:
+        print("File not found")
+        return
+
+    time = ["2008-Q1", "2008-Q2", "2008-Q3", "2008-Q4",
+            "2009-Q1", "2009-Q2", "2009-Q3", "2009-Q4"]
+    allData = np.zeros(8)
+    data = []
+    collected = False
+    index = 0
+    for l in lines[1:]:
+        if l[-3] in time:
+           data.append(float(l[-2]))
+           collected = True
+        elif collected:
+            allData = np.vstack((allData, data))
+            index += 1
+            data = []
+            collected = False
+
+    # Calculate change
+    changes = []
+    for data in allData:
+        c = totalChange(data)
+        changes.append(c)
+
+    print(np.mean(changes))
+    print(np.std(changes))
+    print(np.amin(changes), np.amax(changes))
+    print(np.where(changes == np.amin(changes)))
 
 def getTime(time, date):
     index = 0
@@ -156,9 +192,9 @@ if __name__=="__main__":
     print("Spain change: ", np.mean(spainChange))
     print("USA change: ", np.mean(usaChange))
 
-    t = getTime(time, "2008-Q2")
-    t2 = getTime(time, "2009-Q1")
-    print("Overall change UK 2007Q4 - 2009Q4", totalChange(ukChange[t:t2]))
-    print("Overall change UK 2007Q4 - 2009Q4", totalChange(spainChange[t:t2]))
-    print("Overall change UK 2007Q4 - 2009Q4", totalChange(usaChange[t:t2]))
-    print("Overall change UK 2007Q4 - 2009Q4", totalChange(germanyChange[t:t2]))
+    t = getTime(time, "2008-Q1")
+    t2 = getTime(time, "2009-Q4")
+    print("Overall change Japan 2008Q1 - 2009Q4", totalChange(ukChange[t:t2]))
+    print("Overall change Australia 2008Q1 - 2009Q4", totalChange(spainChange[t:t2]))
+    print("Overall change Iceland 2008Q1 - 2009Q4", totalChange(usaChange[t:t2]))
+    print("Overall change Denmark 2008Q1 - 2009Q4", totalChange(germanyChange[t:t2]))
