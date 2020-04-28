@@ -125,7 +125,7 @@ def tempAnalysis():
     plt.plot(x2, normalizedNetworth)
     plt.scatter(x2[sp], normalizedNetworth[sp], c='r', zorder=3)
     plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
+    plt.yticks([])
     plt.show()
 
     # calculate plt.xcorr
@@ -283,7 +283,7 @@ def montecarlo():
             meanBust = np.mean(crisesSize[::1])
         aggregateCrises[i][0] = len(percentLoss[percentLoss < 0])
         aggregateCrises[i][1] = meanBust
-        aggregateCrises[i][2] = np.mean(percentLoss)
+        aggregateCrises[i][2] = np.mean(percentLoss[percentLoss < 0])
         aggregateCrises[i][3] = np.std(percentLoss)
         i += 1
 
@@ -304,8 +304,8 @@ def montecarlo():
     plt.yticks(fontsize=14)
     plt.show()
 
-    plt.hist(aggregateCrises[:,0], bins=40)
-    plt.title("Distribution of Number of Crises in Simulation")
+    plt.hist(aggregateCrises[:,2], bins=40)
+    plt.title("Distribution of Average of Crises in Simulation")
     plt.show()
 
     print("Max and Min correlations with leverage vs features")
@@ -320,8 +320,8 @@ def montecarlo():
     print("Use this values to check against 2007Q4 and 2008Q1")
     print(np.mean(allCrisesLoss))
     print(np.std(allCrisesLoss))
-    print(np.mean(aggregateCrises[:,3]))
-    print(np.std(aggregateCrises[:,3])) # if this is low then our simulations are consistent in variation of crises
+    print(np.mean(aggregateCrises[:,2]))
+    print(np.std(aggregateCrises[:,2])) # if this is low then our simulations are consistent in variation of crises
     plt.scatter(aggregateCrises[:,2], aggregateCrises[:,3])
     plt.show()
     print(np.where(aggregateCrises[:,2] < 1) and np.where(aggregateCrises[:,2] > 0.5))
@@ -339,24 +339,23 @@ def montecarlo():
     print(np.amax(change), np.amin(change))
 
     # see if quarterly change of countries is comparable to each simulation
-    time, uk, spain, usa, germany = validation.getOECDData()
-    for dataset in [uk, spain, usa, germany]:
+    oecd = validation.getAllOECD()
+    testResults = 0
+    n = len(oecd[0])
+    m = len(change[0])
+    criticalValue = 1.63*np.sqrt((n+m)/(n*m))
+    for dataset in oecd:
         tests = []
+        d = []
         for i in change:
             t = stats.ks_2samp(dataset, i) # uk quarterly %change compare with first sim
-            if t[1] < 0.1 and t[0] > 0.217:
+            if t[1] < 0.05 and t[0] > criticalValue:
                 tests.append(t[0])
-        print(len(tests))
-        print(np.mean(tests))
+        testResults += len(tests)
+        d.append(tests)
+    print("KS-tests with OECD: ", testResults)
+    print(np.mean(d))
    
-    print("-------")
-    print("Check GDP loss 2007-Q4 till 2008-Q3")
-    t = validation.getTime(time, "2008-Q2")
-    t2 = validation.getTime(time, "2009-Q1")
-    for dataset in [uk, spain, usa, germany]:
-        totalChange = validation.totalChange(dataset[t:t2])
-        print(totalChange)
-
 
 def classify(key):
 

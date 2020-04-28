@@ -90,6 +90,27 @@ def getOECDData():
     #return timeStamps, ukChange, spainChange, usaChange, germanyChange
     return timeStamps, japanChange, australiaChange, icelandChange, denmarkChange
 
+def getAllOECD():
+    try:
+        data = open("validation/GDP/OECD/DP_LIVE_23042020223727726.csv")
+        reader = csv.reader(data)
+        lines = list(reader)
+    except FileNotFoundError:
+        print("File not found")
+        return
+
+    breakpoint = "2019-Q4"
+    allData = np.zeros(79)
+    data = []
+    for l in lines[1:]:
+        if l[-3] != breakpoint:
+           data.append(float(l[-2]))
+        else:
+            allData = np.vstack((allData, data))
+            data = []
+
+    return allData
+
 def get2008Crisis():
     try:
         data = open("validation/GDP/OECD/DP_LIVE_23042020223727726.csv")
@@ -104,14 +125,12 @@ def get2008Crisis():
     allData = np.zeros(8)
     data = []
     collected = False
-    index = 0
     for l in lines[1:]:
         if l[-3] in time:
            data.append(float(l[-2]))
            collected = True
         elif collected:
             allData = np.vstack((allData, data))
-            index += 1
             data = []
             collected = False
 
@@ -120,11 +139,9 @@ def get2008Crisis():
     for data in allData:
         c = totalChange(data)
         changes.append(c)
+    
+    return changes
 
-    print(np.mean(changes))
-    print(np.std(changes))
-    print(np.amin(changes), np.amax(changes))
-    print(np.where(changes == np.amin(changes)))
 
 def getTime(time, date):
     index = 0
