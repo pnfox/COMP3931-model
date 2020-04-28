@@ -227,7 +227,7 @@ def findStationaryPoints(data):
 
 def montecarlo():
 
-    simFolders = "results/*_var02/"
+    simFolders = "results/*_var015/"
     simulations = glob.glob(simFolders)
     if not simulations:
         print("No result files to analyze")
@@ -621,20 +621,32 @@ def executeCommand(cmd):
 
 
 if __name__=="__main__":
+    global firms, banks, individualfirm, economy, parameters
     folders = glob.glob("results/*/")
+    folder = ""
     choice = 0
     while(True):
         try:
-            choice = selectResults(folders)
-            if choice != -1:
+            if len(sys.argv) == 2:
+                folder = sys.argv[1]
+                if folder != "/":
+                    folder += "/"
                 break
+            else:
+                choice = selectResults(folders)
+                if choice != -1:
+                    break
         except EOFError:
             print("Exiting reader")
             sys.exit()
 
-    print("Opening results from " + folders[choice])
-    global firms, banks, individualfirm, economy, parameters
-    firms, banks, individualfirm, economy, parameters = openSimulationFiles(folders[choice])
+    if choice != 0:
+        print("Opening results from " + folders[choice])
+        print("Type 'help' for command options")
+        firms, banks, individualfirm, economy, parameters = openSimulationFiles(folders[choice])
+    else:
+        print("Type 'help' for command options")
+        firms, banks, individualfirm, economy, parameters = openSimulationFiles(folder)
 
     while(True):
         try:
