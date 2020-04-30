@@ -227,7 +227,7 @@ def findStationaryPoints(data):
 
 def montecarlo():
 
-    simFolders = "results/*_var015/"
+    simFolders = "results/*_var02/"
     simulations = glob.glob(simFolders)
     if not simulations:
         print("No result files to analyze")
@@ -287,13 +287,27 @@ def montecarlo():
         aggregateCrises[i][3] = np.std(percentLoss)
         i += 1
 
-    plt.hist(allCrisesLoss, bins=200) # shows the size of crises our findStationaryPoints is capturing
-    plt.ylabel("Frequency", fontsize=14)
-    plt.xlabel("% GDP change", fontsize=14)
-    plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
-    plt.show()
-    meanCorr = np.mean(aggregateCorrelations, axis=0)
+    features = ["firm output", "firm networth", "firms debt", \
+            "firm profit", "firm capital", "banks networth", \
+            "bank badDebt", "bank profit"]
+    # find average cross-correlation
+    corr = np.zeros(8)
+    corrSD = np.zeros(8)
+    for i in range(8):
+        corr = np.mean(aggregateCorrelations[:,i], axis=0)
+        corrSD = np.var(aggregateCorrelations[:,i], axis=0)
+        maxlags = 100
+        Nx = len(smoothOutput)
+        lags = np.arange(-maxlags, maxlags + 1)
+        correls = corr[Nx - 1 - maxlags:Nx + maxlags]
+        correlsSD = corrSD[Nx - 1 - maxlags:Nx + maxlags]
+        xspace = np.linspace(-maxlags/2, maxlags/2, len(correls))
+        plt.scatter(xspace, correls)
+        plt.plot(xspace, correls + correlsSD, dashes=[1,1], c='b')
+        plt.plot(xspace, correls - correlsSD, dashes=[1,1], c='b')
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.show()
 
     meanOutput = np.median(aggregateOutput, axis=0)
     stdOutput = np.std(aggregateOutput, axis=0)
@@ -303,15 +317,6 @@ def montecarlo():
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     plt.show()
-
-    plt.hist(aggregateCrises[:,2], bins=40)
-    plt.title("Distribution of Average of Crises in Simulation")
-    plt.show()
-
-    print("Max and Min correlations with leverage vs features")
-    for i in meanCorr:
-        print(np.amax(i), np.amin(i))
-    print("")
 
     print("Average crises (busts) size")
     print(np.mean(aggregateCrises[:,0])) # average of simulations bust size
@@ -339,22 +344,22 @@ def montecarlo():
     print(np.amax(change), np.amin(change))
 
     # see if quarterly change of countries is comparable to each simulation
-    oecd = validation.getAllOECD()
-    testResults = 0
-    n = len(oecd[0])
-    m = len(change[0])
-    criticalValue = 1.63*np.sqrt((n+m)/(n*m))
-    for dataset in oecd:
-        tests = []
-        d = []
-        for i in change:
-            t = stats.ks_2samp(dataset, i) # uk quarterly %change compare with first sim
-            if t[1] < 0.05 and t[0] > criticalValue:
-                tests.append(t[0])
-        testResults += len(tests)
-        d.append(tests)
-    print("KS-tests with OECD: ", testResults)
-    print(np.mean(d))
+    #oecd = validation.getAllOECD()
+    #testResults = 0
+    #n = len(oecd[0])
+    #m = len(change[0])
+    #criticalValue = 1.63*np.sqrt((n+m)/(n*m))
+    #for dataset in oecd:
+    #    tests = []
+    #    d = []
+    #    for i in change:
+    #        t = stats.ks_2samp(dataset, i) # uk quarterly %change compare with first sim
+    #        if t[1] < 0.05 and t[0] > criticalValue:
+    #            tests.append(t[0])
+    #    testResults += len(tests)
+    #    d.append(tests)
+    #print("KS-tests with OECD: ", testResults)
+    #print(np.mean(d))
    
 
 def classify(key):
@@ -624,7 +629,7 @@ if __name__=="__main__":
     global firms, banks, individualfirm, economy, parameters
     folders = glob.glob("results/*/")
     folder = ""
-    choice = 0
+    choice = -1
     while(True):
         try:
             if len(sys.argv) == 2:
@@ -640,7 +645,7 @@ if __name__=="__main__":
             print("Exiting reader")
             sys.exit()
 
-    if choice != 0:
+    if choice != -1:
         print("Opening results from " + folders[choice])
         print("Type 'help' for command options")
         firms, banks, individualfirm, economy, parameters = openSimulationFiles(folders[choice])
