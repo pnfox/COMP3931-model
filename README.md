@@ -29,7 +29,7 @@ This will download and install all python modules required to run this project.
 
 Note: Python >= 3.5 is required, use `virtualenv` to create a python enviroment
 with an appropiate version by running `virtualenv -p PYTHON_EXE DEST_DIR` to use
-to the correct python version.
+the correct python version.
 
 Running a simulation is done via the `main.py` script. Using the following command
 will run a simulation for 1000 steps, 500 firms and 50 banks.
