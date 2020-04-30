@@ -82,7 +82,9 @@ Simply run the following to launch these tools:
 
 This will bring us into the analysis shell, run `help` in here to see
 what commands are available. On launching the tools, saved simulations
-are searched for in the in the `results/` directory.
+are searched for in the in the `results/` directory. Alternatively
+a results folder can be opened via command-line with ```python reader.py [DIR]```
+where ```[DIR]``` is the results folder location.
 
 ### Dependencies
 

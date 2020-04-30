@@ -88,7 +88,7 @@ def tempAnalysis():
     # magic algorithm that transforms data into more useful stuff
     # hopefully this makes cycles more clear
     x, smoothLeverage = spline(economy.leverage, \
-            len(economy.leverage)*np.var(economy.leverage)*0.6, 3)
+            len(economy.leverage)*np.var(economy.leverage)*0.5, 3)
     #smoothLeverage = np.gradient(smoothLeverage)
 
     # plot algorithm output
@@ -114,7 +114,7 @@ def tempAnalysis():
     plt.show()
 
     x2, smoothNetworth = spline(firms.output, \
-        len(firms.output)*np.var(firms.output)*0.17, 3)
+        len(firms.output)*np.var(firms.output)*0.1, 3)
     normalizedNetworth = normalize(smoothNetworth)
 
     print("Plotting normalized output and normalized smooth output")
@@ -125,7 +125,7 @@ def tempAnalysis():
     plt.plot(x2, normalizedNetworth)
     plt.scatter(x2[sp], normalizedNetworth[sp], c='r', zorder=3)
     plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
+    plt.yticks([])
     plt.show()
 
     # calculate plt.xcorr
@@ -257,7 +257,7 @@ def montecarlo():
 
         # Find boom and busts of economy
         x, smoothOutput = spline(firms.output, \
-                len(firms.output)*np.var(firms.output)*0.15, 3)
+                len(firms.output)*np.var(firms.output)*0.1, 3)
 
         sp, spType = findStationaryPoints(smoothOutput)
         crisesSize = np.zeros(len(sp))
@@ -274,23 +274,40 @@ def montecarlo():
         crisesSize = crisesSize[1:]
         percentLoss = percentLoss[1:]
 
-        allCrisesLoss = np.append(allCrisesLoss, percentLoss)
+        allCrisesLoss = np.append(allCrisesLoss, percentLoss[percentLoss < 0])
         if spType[0] < 0: # if first stationary point was maximum
             meanBoom = np.mean(crisesSize[::1])
             meanBust = np.mean(crisesSize[::2])
         else: # if first stationary point was minimum
             meanBoom = np.mean(crisesSize[::2])
             meanBust = np.mean(crisesSize[::1])
-        aggregateCrises[i][0] = len(sp)
+        aggregateCrises[i][0] = len(percentLoss[percentLoss < 0])
         aggregateCrises[i][1] = meanBust
-        aggregateCrises[i][2] = np.mean(percentLoss)
+        aggregateCrises[i][2] = np.mean(percentLoss[percentLoss < 0])
         aggregateCrises[i][3] = np.std(percentLoss)
         i += 1
 
-    plt.hist(allCrisesLoss, bins=200) # shows the size of crises our findStationaryPoints is capturing
-    plt.title("Distribution of all crises change")
-    plt.show()
-    meanCorr = np.mean(aggregateCorrelations, axis=0)
+    features = ["firm output", "firm networth", "firms debt", \
+            "firm profit", "firm capital", "banks networth", \
+            "bank badDebt", "bank profit"]
+    # find average cross-correlation
+    corr = np.zeros(8)
+    corrSD = np.zeros(8)
+    for i in range(8):
+        corr = np.mean(aggregateCorrelations[:,i], axis=0)
+        corrSD = np.var(aggregateCorrelations[:,i], axis=0)
+        maxlags = 100
+        Nx = len(smoothOutput)
+        lags = np.arange(-maxlags, maxlags + 1)
+        correls = corr[Nx - 1 - maxlags:Nx + maxlags]
+        correlsSD = corrSD[Nx - 1 - maxlags:Nx + maxlags]
+        xspace = np.linspace(-maxlags/2, maxlags/2, len(correls))
+        plt.scatter(xspace, correls)
+        plt.plot(xspace, correls + correlsSD, dashes=[1,1], c='b')
+        plt.plot(xspace, correls - correlsSD, dashes=[1,1], c='b')
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.show()
 
     meanOutput = np.median(aggregateOutput, axis=0)
     stdOutput = np.std(aggregateOutput, axis=0)
@@ -301,32 +318,23 @@ def montecarlo():
     plt.yticks(fontsize=14)
     plt.show()
 
-    plt.hist(aggregateCrises[:,2], bins=40)
-    plt.title("Distribution of average % change of crises")
-    plt.show()
-
-    print("Max and Min correlations with leverage vs features")
-    for i in meanCorr:
-        print(np.amax(i), np.amin(i))
-    print("")
-
-    print("Average & variance of number of boom and busts")
-    print(np.mean(aggregateCrises, axis=0)[0], np.std(aggregateCrises, axis=0)[0])
-    print(np.amin(aggregateCrises, axis=0)[0], np.amax(aggregateCrises, axis=0)[0])
-
     print("Average crises (busts) size")
-    print(np.mean(aggregateCrises, axis=0)[1]) # average of simulations bust size
+    print(np.mean(aggregateCrises[:,0])) # average of simulations bust size
+    print(np.std(aggregateCrises[:,0]))
     print("Average percentage GDP loss during crisis")
     print("Use this values to check against 2007Q4 and 2008Q1")
     print(np.mean(allCrisesLoss))
     print(np.std(allCrisesLoss))
-    print(np.mean(aggregateCrises[:,3]))
-    print(np.std(aggregateCrises[:,3])) # if this is low then our simulations are consistent in variation of crises
+    print(np.mean(aggregateCrises[:,2]))
+    print(np.std(aggregateCrises[:,2])) # if this is low then our simulations are consistent in variation of crises
+    plt.scatter(aggregateCrises[:,2], aggregateCrises[:,3])
+    plt.show()
+    print(np.where(aggregateCrises[:,2] < 1) and np.where(aggregateCrises[:,2] > 0.5))
     print("Average percentage GDP change")
     plt.hist(np.mean(change, axis=0), bins=40)
     plt.title("Distribution of average quarterly % change")
     plt.show()
-    allChanges = np.reshape(change, (400*49))
+    allChanges = np.reshape(change, (500*49))
     plt.hist(allChanges, bins=200)
     plt.title("Distribution of quarterly all % change")
     plt.show()
@@ -336,24 +344,23 @@ def montecarlo():
     print(np.amax(change), np.amin(change))
 
     # see if quarterly change of countries is comparable to each simulation
-    time, uk, spain, usa, germany = validation.getOECDData()
-    for dataset in [uk, spain, usa, germany]:
-        tests = []
-        for i in change:
-            t = stats.ks_2samp(dataset, i) # uk quarterly %change compare with first sim
-            if t[1] < 0.1 and t[0] > 0.217:
-                tests.append(t[0])
-        print(len(tests))
-        print(np.mean(tests))
+    #oecd = validation.getAllOECD()
+    #testResults = 0
+    #n = len(oecd[0])
+    #m = len(change[0])
+    #criticalValue = 1.63*np.sqrt((n+m)/(n*m))
+    #for dataset in oecd:
+    #    tests = []
+    #    d = []
+    #    for i in change:
+    #        t = stats.ks_2samp(dataset, i) # uk quarterly %change compare with first sim
+    #        if t[1] < 0.05 and t[0] > criticalValue:
+    #            tests.append(t[0])
+    #    testResults += len(tests)
+    #    d.append(tests)
+    #print("KS-tests with OECD: ", testResults)
+    #print(np.mean(d))
    
-    print("-------")
-    print("Check GDP loss 2007-Q4 till 2008-Q3")
-    t = validation.getTime(time, "2008-Q2")
-    t2 = validation.getTime(time, "2009-Q1")
-    for dataset in [uk, spain, usa, germany]:
-        totalChange = validation.totalChange(dataset[t:t2])
-        print(totalChange)
-
 
 def classify(key):
 
@@ -619,20 +626,32 @@ def executeCommand(cmd):
 
 
 if __name__=="__main__":
+    global firms, banks, individualfirm, economy, parameters
     folders = glob.glob("results/*/")
-    choice = 0
+    folder = ""
+    choice = -1
     while(True):
         try:
-            choice = selectResults(folders)
-            if choice != -1:
+            if len(sys.argv) == 2:
+                folder = sys.argv[1]
+                if folder != "/":
+                    folder += "/"
                 break
+            else:
+                choice = selectResults(folders)
+                if choice != -1:
+                    break
         except EOFError:
             print("Exiting reader")
             sys.exit()
 
-    print("Opening results from " + folders[choice])
-    global firms, banks, individualfirm, economy, parameters
-    firms, banks, individualfirm, economy, parameters = openSimulationFiles(folders[choice])
+    if choice != -1:
+        print("Opening results from " + folders[choice])
+        print("Type 'help' for command options")
+        firms, banks, individualfirm, economy, parameters = openSimulationFiles(folders[choice])
+    else:
+        print("Type 'help' for command options")
+        firms, banks, individualfirm, economy, parameters = openSimulationFiles(folder)
 
     while(True):
         try:
