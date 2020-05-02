@@ -4,8 +4,8 @@ import time
 
 def thread_function(batchID, threadID):
     ID = str(batchID)+str(threadID+2)
-    os.system("python3 main.py -s " + ID + " -t 1000 -f 500 -b 50 -var 0.1 " + \
-            " --output results/" + ID + "_var01" + "/")
+    os.system("python3 main.py -s " + ID + " -t 1000 -f 500 -b 50 -var 0.2 " + \
+            " --output results/" + ID + "_var02Pareto" + "/")
 
 # Runs many simulation in parallel
 def batchRun(n):

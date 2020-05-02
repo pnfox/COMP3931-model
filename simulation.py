@@ -23,6 +23,7 @@ class Simulation:
             rCB=0.02, # central bank interest rate
             cB=0.01, # banks costs
             mode=None, # mode to run simulation
+            growth=False, # if enabled add agents through every step
             seed=None,
             outputFolder=None
             ):
@@ -42,6 +43,7 @@ class Simulation:
         self.bestFirm = 0
 
         self.mode = mode
+        self.growthEnabled = growth
         self.continueUntilTime = 0
 
         if seed == None:
@@ -266,6 +268,27 @@ class Simulation:
         self.firms.lgdf[self.firms.lgdf > 1] = 1
         self.firms.lgdf[self.firms.lgdf < 0] = 0
 
+    def addAgents(self, t):
+        if t % 20 == 0:
+            self.banks.addBank()
+            self.numberOfBanks += 1
+
+            self.firms.addFirm()
+            self.numberOfFirms += 1
+
+            banksWithNewFirm = np.ceil(np.random.uniform(0, self.numberOfBanks-1, self.numberOfFirms))
+            self.link_fb = np.column_stack((self.link_fb, np.zeros(self.numberOfFirms-1)))
+
+            self.link_fb = np.vstack((self.link_fb, np.zeros(self.numberOfBanks)))
+            self.link_fb[-1][int(banksWithNewFirm[0])] = 1
+        else:
+            self.firms.addFirm()
+            self.numberOfFirms += 1
+            banksWithNewFirm = np.ceil(np.random.uniform(0, self.numberOfBanks-1, self.numberOfFirms))
+            self.link_fb = np.vstack((self.link_fb, np.zeros(self.numberOfBanks)))
+            self.link_fb[-1][int(banksWithNewFirm[0])] = 1
+        
+
     def reportResults(self, time):
         totalCapital = np.sum(self.firms.capital)
         totalOutput = np.sum(self.firms.output)
@@ -473,8 +496,10 @@ class Simulation:
 
     def run(self):
         print("Running Simulation...")
-        p = []
+        testsPassed = 0
         d = []
+        p = []
+        totalTests = 0
         for t in range(self.time):
             self.currentStep = t
 
@@ -531,25 +556,47 @@ class Simulation:
                 print("Problem with replacing defaulted firms")
                 print(e)
 
-        #    if t > 300 and t%2 == 0:
-        #        data = self.firms.networth[self.firms.networth > 0]
-        #        MLE = stats.genpareto.fit(data)
-        #        dvalue, pvalue = stats.kstest(data, 'genpareto', args=MLE)
-        #        p.append(pvalue)
-        #        d.append(dvalue)
+            if self.growthEnabled:
+                self.addAgents(t)
+
+            if t > 300:
+                b = np.array([])
+                for i in self.link_fb:
+                    banks = np.nonzero(i)[0]
+                    b = np.append(b, banks)
+
+                # Count occurances
+                data = np.unique(b, return_counts=True)[1] 
+                data = np.sort(data)
+
+                MLE = stats.pareto.fit(data)
+                criticalValue = 1.63 * np.sqrt(2/len(data))
+                dvalue, pvalue = stats.kstest(data, 'pareto', args=MLE)
+                #pdf = np.sort(stats.genpareto.rvs(MLE[0], MLE[1], MLE[2], 10000))
+                #x2 = np.linspace(0, len(data), num=len(pdf))
+                #x = np.linspace(0, len(data), num=len(data))
+                #plt.scatter(x, data)
+                #plt.plot(x2, pdf)
+                #plt.ylim([np.amin(data), np.amax(data)])
+                #plt.show()
+                totalTests += 1
+                if dvalue < criticalValue:
+                    testsPassed += 1
+                p = np.append(p, pvalue)
+                d = np.append(d, dvalue)
 
         self.saveResults()
 
         #
         # Check firm wealth follows power law
         #
-        #data = self.firms.networth[self.firms.networth > 0]
-        #infoFile = open(self.outputFolder + "INFO", "a")
-        #criticalValue = 1.36 / np.sqrt(len(data))
-        #infoFile.write("KS test: " + str(np.mean(d)) + ", " + str(np.mean(p)) + "\n")
-        #infoFile.write("Critical Value 95% confidence: " + str(criticalValue) + "\n")
-        #if np.mean(d) < criticalValue:
-        #    infoFile.write("Firm networth Follows pareto distribution\n")
-        #else:
-        #    infoFile.write("Rejected null hypothesis - not pareto distribution\n")
-        #infoFile.close()
+        percentagePassed = (testsPassed/totalTests)*100
+        print(percentagePassed)
+        print(np.mean(d), np.mean(p))
+        print(criticalValue)
+        infoFile = open(self.outputFolder + "INFO", "a")
+        infoFile.write("KS test passed: " + str(percentagePassed) + "%\n")
+        infoFile.write("Critical Value 99% confidence: " + str(criticalValue) + "\n")
+        if percentagePassed >= 0.9:
+            infoFile.write("More than 90% passed\n")
+        infoFile.close()

@@ -7,6 +7,8 @@ class Firms:
                 alpha=0.1, # mean of firms price
                 varpf=0.4 # variance of firms price
                 ):
+        self.alpha = alpha
+        self.varpf = varpf
         self.numberOfFirms = numberOfFirms
         self.price = np.random.normal(alpha, np.sqrt(varpf), size=numberOfFirms)
         self.debt = np.zeros(numberOfFirms)
@@ -21,6 +23,19 @@ class Firms:
 
     def isDefaulted(self, i):
         return np.bool(self.default[i])
+
+    def addFirm(self):
+        self.numberOfFirms += 1
+        self.price = np.append(self.price, np.random.normal(self.alpha, np.sqrt(self.varpf)))
+        self.debt = np.append(self.debt, 0)
+        self.networth = np.append(self.networth, 10)
+        self.profit = np.append(self.profit, 0)
+        self.interestRate = np.append(self.interestRate, 0)
+        self.leverage = np.append(self.leverage, 1)
+        self.capital = np.append(self.capital, 0)
+        self.output = np.append(self.output, 0)
+        self.lgdf = np.append(self.lgdf, 0)
+        self.default = np.append(self.default, 0)
 
 class IndividualFirm:
 
@@ -50,6 +65,17 @@ class Banks:
 
     def isDefaulted(self):
         return np.bool(self.default[i])
+
+    def addBank(self):
+        self.numberOfBanks += 1
+        self.networth = np.append(self.networth, 10)
+        self.profit = np.append(self.profit, 0)
+        self.interestRate = np.append(self.interestRate, 0)
+        self.deposit = np.append(self.deposit, 0)
+        self.badDebt = np.append(self.badDebt, 0)
+        self.creditLinkDegree = np.append(self.creditLinkDegree, 0)
+        self.nonPerformingLoans = np.append(self.nonPerformingLoans, 0)
+        self.default = np.append(self.default, 0)
 
 class Economy:
 

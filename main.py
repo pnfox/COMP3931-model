@@ -33,6 +33,9 @@ parser.add_argument("-bankcost", action='store', dest='bankCost', required=False
 parser.add_argument("-i", "--interactive", required=False, default=False, \
         action='store_true', dest='interactive', \
         help="interactive mode - Useful for debugging")
+parser.add_argument("-g", "--grow", required=False, default=False, \
+        action='store_true', dest='growth', \
+        help="Growth Enabled - turns on population growth")
 parser.add_argument("-s", "--seed", action='store', dest='seed', required=False, \
         help="Simulation seed")
 parser.add_argument("-o", "--output", action='store', dest='folder', required=False, \
@@ -58,6 +61,7 @@ if __name__=="__main__":
     rCB = args.rCB # central bank interest rate
     cB = args.bankCost # banks costs
     output = args.folder
+    growth = args.growth
 
     if(args.interactive):
         mode = "Interactive"
@@ -83,6 +87,7 @@ if __name__=="__main__":
                             rCB,
                             cB,
                             mode=mode,
+                            growth=growth,
                             seed=seed,
                             outputFolder=output)
     model.run()
