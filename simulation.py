@@ -501,10 +501,6 @@ class Simulation:
 
     def run(self):
         print("Running Simulation...")
-        testsPassed = 0
-        d = []
-        p = []
-        totalTests = 0
         for t in range(self.time):
             self.currentStep = t
 
@@ -564,44 +560,5 @@ class Simulation:
             if self.growthEnabled:
                 self.addAgents(t)
 
-            if t > 300:
-                b = np.array([])
-                for i in self.link_fb:
-                    banks = np.nonzero(i)[0]
-                    b = np.append(b, banks)
-
-                # Count occurances
-                data = np.unique(b, return_counts=True)[1] 
-                data = np.sort(data)
-
-                MLE = stats.pareto.fit(data)
-                criticalValue = 1.63 * np.sqrt(2/len(data))
-                dvalue, pvalue = stats.kstest(data, 'pareto', args=MLE)
-                #pdf = np.sort(stats.genpareto.rvs(MLE[0], MLE[1], MLE[2], 10000))
-                #x2 = np.linspace(0, len(data), num=len(pdf))
-                #x = np.linspace(0, len(data), num=len(data))
-                #plt.scatter(x, data)
-                #plt.plot(x2, pdf)
-                #plt.ylim([np.amin(data), np.amax(data)])
-                #plt.show()
-                totalTests += 1
-                if dvalue < criticalValue:
-                    testsPassed += 1
-                p = np.append(p, pvalue)
-                d = np.append(d, dvalue)
-
         self.saveResults()
 
-        #
-        # Check firm wealth follows power law
-        #
-        percentagePassed = (testsPassed/totalTests)*100
-        print(percentagePassed)
-        print(np.mean(d), np.mean(p))
-        print(criticalValue)
-        infoFile = open(self.outputFolder + "INFO", "a")
-        infoFile.write("KS test passed: " + str(percentagePassed) + "%\n")
-        infoFile.write("Critical Value 99% confidence: " + str(criticalValue) + "\n")
-        if percentagePassed >= 0.9:
-            infoFile.write("More than 90% passed\n")
-        infoFile.close()
