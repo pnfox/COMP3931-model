@@ -456,6 +456,11 @@ class Simulation:
                 print("Usage:")
                 print("\tprint [variable].[attribute]")
                 print("Use command list to see valid variables and attributes")
+                print("")
+                print("Examples:")
+                print("\tprint firms.price")
+                print("")
+                print("\tprint firms.networth[3]")
             except SyntaxError:
                 print("Invalid use of command: print")
                 print(str(args[0][:6]) + " has no attribute " + \
@@ -465,7 +470,7 @@ class Simulation:
             try:
                 shellCommand = str(input(">>> "))
                 originalCommand = shellCommand
-                shellCommand = shellCommand.lower().split(" ")
+                shellCommand = shellCommand.split(" ")
                 cmd = shellCommand[0]
                 args = shellCommand[1:]
                 if ("exit" == cmd) or ("quit" == cmd):
