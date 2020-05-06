@@ -23,6 +23,7 @@ class Simulation:
             rCB=0.02, # central bank interest rate
             cB=0.01, # banks costs
             mode=None, # mode to run simulation
+            growth=False, # if enabled add agents through every step
             seed=None,
             outputFolder=None
             ):
@@ -42,6 +43,7 @@ class Simulation:
         self.bestFirm = 0
 
         self.mode = mode
+        self.growthEnabled = growth
         self.continueUntilTime = 0
 
         if seed == None:
@@ -266,6 +268,27 @@ class Simulation:
         self.firms.lgdf[self.firms.lgdf > 1] = 1
         self.firms.lgdf[self.firms.lgdf < 0] = 0
 
+    def addAgents(self, t):
+        if t % 20 == 0:
+            self.banks.addBank()
+            self.numberOfBanks += 1
+
+            self.firms.addFirm()
+            self.numberOfFirms += 1
+
+            banksWithNewFirm = np.ceil(np.random.uniform(0, self.numberOfBanks-1, self.numberOfFirms))
+            self.link_fb = np.column_stack((self.link_fb, np.zeros(self.numberOfFirms-1)))
+
+            self.link_fb = np.vstack((self.link_fb, np.zeros(self.numberOfBanks)))
+            self.link_fb[-1][int(banksWithNewFirm[0])] = 1
+        else:
+            self.firms.addFirm()
+            self.numberOfFirms += 1
+            banksWithNewFirm = np.ceil(np.random.uniform(0, self.numberOfBanks-1, self.numberOfFirms))
+            self.link_fb = np.vstack((self.link_fb, np.zeros(self.numberOfBanks)))
+            self.link_fb[-1][int(banksWithNewFirm[0])] = 1
+        
+
     def reportResults(self, time):
         totalCapital = np.sum(self.firms.capital)
         totalOutput = np.sum(self.firms.output)
@@ -433,6 +456,11 @@ class Simulation:
                 print("Usage:")
                 print("\tprint [variable].[attribute]")
                 print("Use command list to see valid variables and attributes")
+                print("")
+                print("Examples:")
+                print("\tprint firms.price")
+                print("")
+                print("\tprint firms.networth[3]")
             except SyntaxError:
                 print("Invalid use of command: print")
                 print(str(args[0][:6]) + " has no attribute " + \
@@ -442,7 +470,7 @@ class Simulation:
             try:
                 shellCommand = str(input(">>> "))
                 originalCommand = shellCommand
-                shellCommand = shellCommand.lower().split(" ")
+                shellCommand = shellCommand.split(" ")
                 cmd = shellCommand[0]
                 args = shellCommand[1:]
                 if ("exit" == cmd) or ("quit" == cmd):
@@ -473,8 +501,6 @@ class Simulation:
 
     def run(self):
         print("Running Simulation...")
-        p = []
-        d = []
         for t in range(self.time):
             self.currentStep = t
 
@@ -531,25 +557,8 @@ class Simulation:
                 print("Problem with replacing defaulted firms")
                 print(e)
 
-        #    if t > 300 and t%2 == 0:
-        #        data = self.firms.networth[self.firms.networth > 0]
-        #        MLE = stats.genpareto.fit(data)
-        #        dvalue, pvalue = stats.kstest(data, 'genpareto', args=MLE)
-        #        p.append(pvalue)
-        #        d.append(dvalue)
+            if self.growthEnabled:
+                self.addAgents(t)
 
         self.saveResults()
 
-        #
-        # Check firm wealth follows power law
-        #
-        #data = self.firms.networth[self.firms.networth > 0]
-        #infoFile = open(self.outputFolder + "INFO", "a")
-        #criticalValue = 1.36 / np.sqrt(len(data))
-        #infoFile.write("KS test: " + str(np.mean(d)) + ", " + str(np.mean(p)) + "\n")
-        #infoFile.write("Critical Value 95% confidence: " + str(criticalValue) + "\n")
-        #if np.mean(d) < criticalValue:
-        #    infoFile.write("Firm networth Follows pareto distribution\n")
-        #else:
-        #    infoFile.write("Rejected null hypothesis - not pareto distribution\n")
-        #infoFile.close()

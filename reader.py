@@ -79,8 +79,12 @@ def spline(data, smooth=2, scale=1):
     x = np.linspace(0, len(data), int(len(data)*scale)) # if this x has more than len(data) lots of pearson oscillation
     return x, splev(x, spline)
 
-def normalize(data):
+def standardize(data):
     data = (data - np.mean(data)) / np.std(data)
+    return data
+
+def standardize2(data, mean, std):
+    data = (data - mean)/std
     return data
 
 def tempAnalysis():
@@ -105,37 +109,37 @@ def tempAnalysis():
     ax[2].grid(True)
     plt.show()
 
-    print("Plotting normalized leverage and normalized smooth leverage")
-    normalizedLeverage = normalize(economy.leverage)
-    normalizedChange = normalize(smoothLeverage)
+    print("Plotting standardized leverage and standardized smooth leverage")
+    standardizedLeverage = standardize(economy.leverage)
+    standardizedChange = standardize(smoothLeverage)
 
-    plt.plot(normalizedLeverage)
-    plt.plot(x, normalizedChange)
+    plt.plot(standardizedLeverage)
+    plt.plot(x, standardizedChange)
     plt.show()
 
     x2, smoothNetworth = spline(firms.output, \
-        len(firms.output)*np.var(firms.output)*0.1, 3)
-    normalizedNetworth = normalize(smoothNetworth)
+        len(firms.output)*np.var(firms.output)*0.05, 3)
+    standardizedNetworth = standardize(smoothNetworth)
 
-    print("Plotting normalized output and normalized smooth output")
-    nw = normalize(firms.output)
+    print("Plotting standardized output and standardized smooth output")
+    nw = standardize(firms.output)
     sp, spTypes = findStationaryPoints(smoothNetworth)
     plt.plot(np.linspace(200,1000, len(nw)), nw)
     x2 = x2 + 200
-    plt.plot(x2, normalizedNetworth)
-    plt.scatter(x2[sp], normalizedNetworth[sp], c='r', zorder=3)
+    plt.plot(x2, standardizedNetworth)
+    plt.scatter(x2[sp], standardizedNetworth[sp], c='r', zorder=3)
     plt.xticks(fontsize=14)
     plt.yticks([])
     plt.show()
 
     # calculate plt.xcorr
-    corr = np.correlate(normalizedNetworth, normalizedChange, "full")
-    corr /= np.sqrt(np.dot(normalizedNetworth, normalizedNetworth) * \
-            np.dot(normalizedChange, normalizedChange))
+    corr = np.correlate(standardizedNetworth, standardizedChange, "full")
+    corr /= np.sqrt(np.dot(standardizedNetworth, standardizedNetworth) * \
+            np.dot(standardizedChange, standardizedChange))
     plt.plot(corr)
     plt.show()
     maxlags = 100
-    Nx = len(normalizedNetworth)
+    Nx = len(standardizedNetworth)
     lags = np.arange(-maxlags, maxlags + 1)
     correls = corr[Nx - 1 - maxlags:Nx + maxlags]
     xspace = np.linspace(-maxlags/2, maxlags/2, len(correls))
@@ -171,7 +175,7 @@ def findCorrelations(firms, x):
     # Use splines to smooth randomness of data
     smoothX = spline(x, \
         len(x)*np.var(x)*0.6, 3)[1]
-    smoothX = normalize(smoothX)
+    smoothX = standardize(smoothX)
 
     # Calculate correlations of leverage with other features
     corrArray = np.zeros((8,4799))
@@ -179,7 +183,7 @@ def findCorrelations(firms, x):
     for data in features:
         smoothData = spline(data, \
             len(data)*np.var(data)*0.17, 3)[1]
-        smoothData = normalize(smoothData)
+        smoothData = standardize(smoothData)
         corr = np.correlate(smoothData, smoothX, "full")
         corr /= np.sqrt(np.dot(smoothData, smoothData) * \
             np.dot(smoothX, smoothX))
@@ -225,9 +229,9 @@ def findStationaryPoints(data):
 
     return stationaryPoints, pointType
 
-def montecarlo():
+def montecarlo(intervalSize):
 
-    simFolders = "results/*_var02/"
+    simFolders = "results/*_var02Growth/"
     simulations = glob.glob(simFolders)
     if not simulations:
         print("No result files to analyze")
@@ -240,7 +244,8 @@ def montecarlo():
     aggregateCorrelations = np.zeros((len(simulations), 8, 4799)) # correlation vectors of leverage vs 8 features
     aggregateCrises = np.zeros((len(simulations), 4)) # for each simulation stores number of crises and there size
     aggregateOutput = np.zeros((len(simulations), 800))
-    change = np.zeros((len(simulations), 49))
+    numberOfIntervals = int(800 / intervalSize)
+    change = np.zeros((len(simulations), int(numberOfIntervals)-1))
     allCrisesLoss = np.array([])
     i = 0
     for folder in simulations:
@@ -249,118 +254,129 @@ def montecarlo():
 
         aggregateOutput[i] = firms.output
 
-        quarterlyOutput = firms.output[np.arange(0, len(firms.output), len(firms.output)/50, dtype=int)]
-        change[i] = (np.diff(quarterlyOutput) / quarterlyOutput[:-1]) * 100
-
         # Store correlation values in array
         aggregateCorrelations[i] = findCorrelations(firms, economy.leverage)
 
         # Find boom and busts of economy
         x, smoothOutput = spline(firms.output, \
-                len(firms.output)*np.var(firms.output)*0.1, 3)
+                len(firms.output)*np.var(firms.output)*0.0005, 3)
 
-        sp, spType = findStationaryPoints(smoothOutput)
-        crisesSize = np.zeros(len(sp))
-        percentLoss = np.zeros(len(sp))
-        index = 0
-        for p in sp:
-            if index != 0: # skip first
-                cS = np.fabs(smoothOutput[p] - smoothOutput[previous])
-                pL = ((smoothOutput[p] - smoothOutput[previous]) / smoothOutput[previous] ) * 100
-                crisesSize[index] = cS
-                percentLoss[index] = pL
-            previous = p
-            index += 1
-        crisesSize = crisesSize[1:]
-        percentLoss = percentLoss[1:]
+        quarterlyOutput = firms.output[np.arange(0, len(firms.output), len(firms.output)/(numberOfIntervals), dtype=int)]
+        change[i] = (np.diff(quarterlyOutput) / quarterlyOutput[:-1]) * 100
 
-        allCrisesLoss = np.append(allCrisesLoss, percentLoss[percentLoss < 0])
-        if spType[0] < 0: # if first stationary point was maximum
-            meanBoom = np.mean(crisesSize[::1])
-            meanBust = np.mean(crisesSize[::2])
-        else: # if first stationary point was minimum
-            meanBoom = np.mean(crisesSize[::2])
-            meanBust = np.mean(crisesSize[::1])
-        aggregateCrises[i][0] = len(percentLoss[percentLoss < 0])
-        aggregateCrises[i][1] = meanBust
-        aggregateCrises[i][2] = np.mean(percentLoss[percentLoss < 0])
-        aggregateCrises[i][3] = np.std(percentLoss)
-        i += 1
+        #sp, spType = findStationaryPoints(smoothOutput)
+        #crisesSize = np.zeros(len(sp))
+        #percentLoss = np.zeros(len(sp))
+        #index = 0
+        #for p in sp:
+        #    if index != 0: # skip first
+        #        cS = np.fabs(smoothOutput[p] - smoothOutput[previous])
+        #        pL = ((smoothOutput[p] - smoothOutput[previous]) / smoothOutput[previous] ) * 100
+        #        crisesSize[index] = cS
+        #        percentLoss[index] = pL
+        #    previous = p
+        #    index += 1
+        #crisesSize = crisesSize[1:]
+        #percentLoss = percentLoss[1:]
+
+        #allCrisesLoss = np.append(allCrisesLoss, percentLoss[percentLoss < 0])
+        #if spType[0] < 0: # if first stationary point was maximum
+        #    meanBoom = np.mean(crisesSize[::1])
+        #    meanBust = np.mean(crisesSize[::2])
+        #else: # if first stationary point was minimum
+        #    meanBoom = np.mean(crisesSize[::2])
+        #    meanBust = np.mean(crisesSize[::1])
+        #aggregateCrises[i][0] = len(percentLoss[percentLoss < 0])
+        #aggregateCrises[i][1] = meanBust
+        #aggregateCrises[i][2] = np.mean(percentLoss[percentLoss < 0])
+        #aggregateCrises[i][3] = np.std(percentLoss)
+        #i += 1
 
     features = ["firm output", "firm networth", "firms debt", \
             "firm profit", "firm capital", "banks networth", \
             "bank badDebt", "bank profit"]
     # find average cross-correlation
-    corr = np.zeros(8)
-    corrSD = np.zeros(8)
-    for i in range(8):
-        corr = np.mean(aggregateCorrelations[:,i], axis=0)
-        corrSD = np.var(aggregateCorrelations[:,i], axis=0)
-        maxlags = 100
-        Nx = len(smoothOutput)
-        lags = np.arange(-maxlags, maxlags + 1)
-        correls = corr[Nx - 1 - maxlags:Nx + maxlags]
-        correlsSD = corrSD[Nx - 1 - maxlags:Nx + maxlags]
-        xspace = np.linspace(-maxlags/2, maxlags/2, len(correls))
-        plt.scatter(xspace, correls)
-        plt.plot(xspace, correls + correlsSD, dashes=[1,1], c='b')
-        plt.plot(xspace, correls - correlsSD, dashes=[1,1], c='b')
-        plt.xticks(fontsize=14)
-        plt.yticks(fontsize=14)
-        plt.show()
+    #corr = np.zeros(8)
+    #corrSD = np.zeros(8)
+    #for i in range(8):
+    #    corr = np.mean(aggregateCorrelations[:,i], axis=0)
+    #    corrSD = np.var(aggregateCorrelations[:,i], axis=0)
+    #    maxlags = 100
+    #    Nx = len(smoothOutput)
+    #    lags = np.arange(-maxlags, maxlags + 1)
+    #    correls = corr[Nx - 1 - maxlags:Nx + maxlags]
+    #    correlsSD = corrSD[Nx - 1 - maxlags:Nx + maxlags]
+    #    xspace = np.linspace(-maxlags/2, maxlags/2, len(correls))
+    #    plt.scatter(xspace, correls)
+    #    plt.plot(xspace, correls + correlsSD, dashes=[1,1], c='b')
+    #    plt.plot(xspace, correls - correlsSD, dashes=[1,1], c='b')
+    #    plt.xticks(fontsize=14)
+    #    plt.yticks(fontsize=14)
+    #    plt.show()
 
-    meanOutput = np.median(aggregateOutput, axis=0)
-    stdOutput = np.std(aggregateOutput, axis=0)
-    plt.plot(meanOutput, c='b')
-    plt.plot(meanOutput + stdOutput, dashes=[2,2], c='b')
-    plt.plot(meanOutput - stdOutput, dashes=[2,2], c='b')
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
-    plt.show()
+    #meanOutput = np.median(aggregateOutput, axis=0)
+    #stdOutput = np.std(aggregateOutput, axis=0)
+    #plt.plot(meanOutput, c='b')
+    #plt.plot(meanOutput + stdOutput, dashes=[2,2], c='b')
+    #plt.plot(meanOutput - stdOutput, dashes=[2,2], c='b')
+    #plt.xticks(fontsize=14)
+    #plt.yticks(fontsize=14)
+    #plt.show()
 
-    print("Average crises (busts) size")
-    print(np.mean(aggregateCrises[:,0])) # average of simulations bust size
-    print(np.std(aggregateCrises[:,0]))
-    print("Average percentage GDP loss during crisis")
-    print("Use this values to check against 2007Q4 and 2008Q1")
-    print(np.mean(allCrisesLoss))
-    print(np.std(allCrisesLoss))
-    print(np.mean(aggregateCrises[:,2]))
-    print(np.std(aggregateCrises[:,2])) # if this is low then our simulations are consistent in variation of crises
-    plt.scatter(aggregateCrises[:,2], aggregateCrises[:,3])
-    plt.show()
-    print(np.where(aggregateCrises[:,2] < 1) and np.where(aggregateCrises[:,2] > 0.5))
-    print("Average percentage GDP change")
-    plt.hist(np.mean(change, axis=0), bins=40)
-    plt.title("Distribution of average quarterly % change")
-    plt.show()
-    allChanges = np.reshape(change, (500*49))
-    plt.hist(allChanges, bins=200)
-    plt.title("Distribution of quarterly all % change")
-    plt.show()
-    print(np.mean(change) == np.mean(np.mean(change, axis=0)))
-    print(np.mean(change) == np.mean(allChanges))
-    print(np.std(change))
-    print(np.amax(change), np.amin(change))
+    #print("Average crises (busts) size")
+    #print(np.mean(aggregateCrises[:,0])) # average of simulations bust size
+    #print(np.std(aggregateCrises[:,0]))
+    #print("Average percentage GDP loss during crisis")
+    #print("Use this values to check against 2007Q4 and 2008Q1")
+    #print(np.mean(allCrisesLoss))
+    #print(np.std(allCrisesLoss))
+    #print(np.mean(aggregateCrises[:,2]))
+    #print(np.std(aggregateCrises[:,2])) # if this is low then our simulations are consistent in variation of crises
+    #plt.scatter(aggregateCrises[:,2], aggregateCrises[:,3])
+    #plt.show()
+    #print(np.where(aggregateCrises[:,2] < 1) and np.where(aggregateCrises[:,2] > 0.5))
+    #print("Average percentage GDP change")
+    #plt.hist(np.mean(change, axis=0), bins=40)
+    #plt.title("Distribution of average quarterly % change")
+    #plt.show()
+    #allChanges = np.reshape(change, (500*(int(numberOfIntervals)-1)))
+    #plt.hist(allChanges, bins=49)
+    #plt.title("Distribution of quarterly all % change")
+    #plt.show()
+    #print(np.mean(change) == np.mean(np.mean(change, axis=0)))
+    #print(np.mean(change) == np.mean(allChanges))
+    #print(np.std(change))
+    #print(np.amax(change), np.amin(change))
+
 
     # see if quarterly change of countries is comparable to each simulation
-    #oecd = validation.getAllOECD()
-    #testResults = 0
-    #n = len(oecd[0])
-    #m = len(change[0])
-    #criticalValue = 1.63*np.sqrt((n+m)/(n*m))
-    #for dataset in oecd:
-    #    tests = []
-    #    d = []
-    #    for i in change:
-    #        t = stats.ks_2samp(dataset, i) # uk quarterly %change compare with first sim
-    #        if t[1] < 0.05 and t[0] > criticalValue:
-    #            tests.append(t[0])
-    #    testResults += len(tests)
-    #    d.append(tests)
-    #print("KS-tests with OECD: ", testResults)
-    #print(np.mean(d))
-   
+    uk = validation.getAllOECD("GBR")
+    usa = validation.getAllOECD("USA")
+    denmark = validation.getAllOECD("DNK")
+    g7 = validation.getAllOECD("G-7")
+    OECD = validation.getAllOECD("OECD")
+
+
+    #plt.plot(standardize(change[0]))
+    #plt.plot(uk)
+    #plt.show()
+
+    testResults = 0
+    n = len(uk)
+    m = len(change[0])
+    criticalValue = 1.22*np.sqrt((n+m)/(n*m))
+    mean = np.mean(uk, axis=0)
+    std = np.std(uk, axis=0)
+
+    d = []
+    data = []
+    for oecd in [uk, usa, denmark, g7, OECD]:
+        meanOECD = np.mean(oecd)
+        for i in change:
+            meanChange = np.mean(i)
+            d.append(np.fabs(meanOECD - meanChange))
+  
+    return np.mean(d)
 
 def classify(key):
 
@@ -564,7 +580,17 @@ def executeCommand(cmd):
     if cmd[0] == "test2":
         tempAnalysis2()
     if cmd[0] == "monte":
-        montecarlo()
+        hstar = 0
+        dmin = np.inf
+        for h in [1,2,3,8,10,23]:
+            d = montecarlo(h)
+            if d < dmin:
+                dmin = d
+                hstar = h
+        print("Best interval size compared to OECD")
+        print("h: ", hstar)
+        print("d: ", dmin)
+
     if cmd[0] == "open":
         choice = selectResults(folders)
         if choice > len(folders) or choice < 0:
